@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'history_screen.dart';
 import 'home_screen.dart';
+import 'items_screen.dart';
 import 'meal_sheet.dart';
 import 'widgets/common.dart';
 import 'widgets/tab_icons.dart';
@@ -49,7 +50,7 @@ class Shell extends ConsumerWidget {
         children: const [
           HomeScreen(),
           HistoryScreen(),
-          _Placeholder('Meal Items'),
+          ItemsScreen(),
           _Placeholder('Settings'),
         ],
       ),

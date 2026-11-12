@@ -103,6 +103,27 @@ class _ItemSheetState extends ConsumerState<ItemSheet> {
     }
   }
 
+  Future<void> _delete() async {
+    final item = widget.editing!;
+    final notifier = ref.read(appDataProvider.notifier);
+    final uses = await notifier.itemUsageCount(item.id);
+    if (!mounted) return;
+    final ok = await confirm(
+      context,
+      title: 'Delete “${item.name}”?',
+      message: uses == 0
+          ? 'It isn’t used in any logged meal.'
+          : 'It appears in ${plural(uses, 'logged line')}. Those meals keep '
+                'the name “${item.name}”. To just hide it from search, '
+                'deactivate it instead.',
+      action: 'Delete',
+    );
+    if (!ok || !mounted) return;
+    final nav = Navigator.of(context);
+    await notifier.deleteItem(item.id);
+    nav.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     final c = context.c;
@@ -204,6 +225,18 @@ class _ItemSheetState extends ConsumerState<ItemSheet> {
                     'Defaults pre-fill new entries. Changing them never rewrites meals you already saved.',
                     style: sans(12.5, color: c.inkA(.45), height: 1.5),
                   ),
+                  if (widget.editing != null) ...[
+                    const SizedBox(height: 18),
+                    Center(
+                      child: Pill(
+                        label: 'Delete food item',
+                        style: PillStyle.ghost,
+                        color: c.danger,
+                        fontSize: 14.5,
+                        onTap: _delete,
+                      ),
+                    ),
+                  ],
                 ],
               ),
             ),
