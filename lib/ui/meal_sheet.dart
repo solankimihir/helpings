@@ -26,9 +26,15 @@ Future<void> showMealSheet(
     shape: const RoundedRectangleBorder(
       borderRadius: BorderRadius.vertical(top: Radius.circular(28)),
     ),
-    builder: (_) => FractionallySizedBox(
-      heightFactor: .92,
-      child: MealSheet(editing: editing, date: date),
+    // Lift the sheet above the keyboard rather than letting the list run
+    // underneath it: otherwise a focused field "fits" in a viewport the
+    // keyboard is covering, and Flutter never scrolls it into view.
+    builder: (ctx) => Padding(
+      padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
+      child: FractionallySizedBox(
+        heightFactor: .92,
+        child: MealSheet(editing: editing, date: date),
+      ),
     ),
   );
 }
@@ -76,6 +82,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
   late final TextEditingController _notes;
   final _search = TextEditingController();
   final _rows = <_DraftRow>[];
+  final _pickKey = GlobalKey();
   String _error = '';
   bool _saving = false;
 
@@ -134,6 +141,21 @@ class _MealSheetState extends ConsumerState<MealSheet> {
           unit: item.defaultUnit ?? fallbackUnit,
           cal: fmtQty(item.defaultCalories),
         ),
+      );
+    });
+    _revealPicker();
+  }
+
+  /// Keeps the search box and its results on screen above the keyboard:
+  /// each added item pushes it further down the list.
+  void _revealPicker() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final ctx = _pickKey.currentContext;
+      if (ctx == null || !ctx.mounted) return;
+      Scrollable.ensureVisible(
+        ctx,
+        duration: const Duration(milliseconds: 220),
+        curve: Curves.easeOutCubic,
       );
     });
   }
@@ -199,7 +221,6 @@ class _MealSheetState extends ConsumerState<MealSheet> {
   Widget build(BuildContext context) {
     final c = context.c;
     final data = ref.watch(appDataProvider).requireValue;
-    final insets = MediaQuery.viewInsetsOf(context).bottom;
 
     return Column(
       children: [
@@ -219,7 +240,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
         Expanded(
           child: ListView(
             keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-            padding: EdgeInsets.fromLTRB(18, 16, 18, 40 + insets),
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 40),
             children: [
               Wrap(
                 spacing: 7,
@@ -308,9 +329,13 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                 ),
               const SizedBox(height: 6),
               _PickPanel(
+                key: _pickKey,
                 controller: _search,
                 items: data.items,
-                onChanged: () => setState(() {}),
+                onChanged: () {
+                  setState(() {});
+                  _revealPicker();
+                },
                 onPick: (i) => _addFromItem(i, data.defaultUnit),
                 onCreate: () => _createFromSearch(data.defaultUnit),
               ),
@@ -443,6 +468,7 @@ class _DraftRowCard extends StatelessWidget {
 /// Search box + matching active food chips + "Create …".
 class _PickPanel extends StatelessWidget {
   const _PickPanel({
+    super.key,
     required this.controller,
     required this.items,
     required this.onChanged,

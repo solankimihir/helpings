@@ -33,7 +33,19 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byType(CupertinoPicker), findsNothing);
 
-      // Time wheel.
+      // Time wheel. Adding an item scrolled the sheet down to the search
+      // box, so scroll back up to the Time field first.
+      await tester.scrollUntilVisible(
+        find.bySemanticsLabel('Time'),
+        -100,
+        scrollable: find
+            .ancestor(
+              of: find.widgetWithText(TextField, 'Search food — e.g. Roti'),
+              matching: find.byType(Scrollable),
+            )
+            .last,
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.bySemanticsLabel('Time'));
       await tester.pumpAndSettle();
       expect(find.byType(CupertinoDatePicker), findsOneWidget);
