@@ -66,12 +66,12 @@ flutter:
   uses-material-design: true
 
   fonts:
-    - family: DMSans
+    - family: Lexend
       fonts:
-        - asset: assets/fonts/DMSans.ttf
-    - family: InstrumentSerif
+        - asset: assets/fonts/Lexend.ttf
+    - family: DMSerifDisplay
       fonts:
-        - asset: assets/fonts/InstrumentSerif-Regular.ttf
+        - asset: assets/fonts/DMSerifDisplay-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

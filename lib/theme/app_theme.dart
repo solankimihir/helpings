@@ -148,10 +148,10 @@ extension AppColorsX on BuildContext {
   AppColors get c => Theme.of(this).extension<AppColors>()!;
 }
 
-const kSans = 'DMSans';
-const kSerif = 'InstrumentSerif';
+const kSans = 'Lexend';
+const kSerif = 'DMSerifDisplay';
 
-/// DM Sans is a variable font; set the `wght` axis explicitly so every
+/// Lexend is a variable font; set the `wght` axis explicitly so every
 /// weight renders correctly on both platforms.
 TextStyle sans(
   double size, {

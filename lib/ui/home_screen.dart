@@ -43,9 +43,16 @@ class HomeScreen extends ConsumerWidget {
               children: [
                 Text('TODAY', style: overline(context, spacing: .14)),
                 const SizedBox(height: 4),
-                Text(
-                  longDate(DateTime.now()),
-                  style: serif(34, color: c.ink, height: 1.08),
+                // Long dates ("Wednesday, September 30") shrink to stay on
+                // one line rather than wrap.
+                FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    longDate(DateTime.now()),
+                    maxLines: 1,
+                    style: serif(34, color: c.ink, height: 1.08),
+                  ),
                 ),
               ],
             ),

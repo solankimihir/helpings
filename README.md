@@ -29,7 +29,7 @@ lib/
   theme/      design tokens (light/dark), fonts, ThemeData
   ui/         shell (tabs), screens, sheets, shared widgets
 test/         repository, formatting and widget tests (in-memory SQLite via FFI)
-assets/fonts/ DM Sans + Instrument Serif (SIL Open Font License)
+assets/fonts/ Lexend + DM Serif Display (SIL Open Font License)
 ```
 
 ## Requirements
