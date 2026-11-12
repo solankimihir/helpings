@@ -53,11 +53,4 @@ void main() {
     expect(dayGroupLabel('2025-12-31', now), 'December 31, 2025');
     expect(longDate(now), 'Thursday, November 12');
   });
-
-  test('meal type guess by hour', () {
-    expect(MealType.forHour(8), MealType.breakfast);
-    expect(MealType.forHour(13), MealType.lunch);
-    expect(MealType.forHour(16), MealType.snack);
-    expect(MealType.forHour(20), MealType.dinner);
-  });
 }

@@ -76,6 +76,92 @@ class Repository {
 
   Future<int> restoreDefaultItems() => insertDefaultItems(_db);
 
+  // ---- Meal types ---------------------------------------------------------
+
+  Future<List<MealType>> mealTypes() async {
+    final rows = await _db.query('meal_types', orderBy: 'position, name');
+    return rows.map(MealType.fromRow).toList();
+  }
+
+  /// Inserts (at the end of the list) or updates. Throws
+  /// [DuplicateNameException] if another type already uses the name.
+  Future<void> saveMealType(MealType type) => _db.transaction((txn) async {
+    final clash = await txn.query(
+      'meal_types',
+      columns: ['name'],
+      where: 'name = ? COLLATE NOCASE AND id != ?',
+      whereArgs: [type.name, type.id],
+      limit: 1,
+    );
+    if (clash.isNotEmpty) {
+      throw DuplicateNameException(clash.first['name'] as String);
+    }
+    final updated = await txn.update(
+      'meal_types',
+      {
+        'name': type.name,
+        'active': type.active ? 1 : 0,
+        'start_minute': type.startMinute,
+      },
+      where: 'id = ?',
+      whereArgs: [type.id],
+    );
+    if (updated == 0) {
+      final last = await txn.rawQuery(
+        'SELECT COALESCE(MAX(position), -1) + 1 AS p FROM meal_types',
+      );
+      await txn.insert('meal_types', {
+        ...type.toRow(),
+        'position': last.first['p'] as int,
+        'created_at': _now,
+      });
+    }
+  });
+
+  /// Rewrites positions to match [ids], first to last.
+  Future<void> reorderMealTypes(List<String> ids) =>
+      _db.transaction((txn) async {
+        for (var i = 0; i < ids.length; i++) {
+          await txn.update(
+            'meal_types',
+            {'position': i},
+            where: 'id = ?',
+            whereArgs: [ids[i]],
+          );
+        }
+      });
+
+  Future<int> mealTypeUsageCount(String id) async {
+    final r = await _db.rawQuery(
+      'SELECT COUNT(*) AS n FROM meals WHERE type = ?',
+      [id],
+    );
+    return r.first['n'] as int;
+  }
+
+  /// Deletes the type, first moving any meals that use it to [moveTo].
+  /// Throws [StateError] if meals use it and [moveTo] is null.
+  Future<void> deleteMealType(String id, {String? moveTo}) =>
+      _db.transaction((txn) async {
+        if (moveTo != null) {
+          await txn.update(
+            'meals',
+            {'type': moveTo},
+            where: 'type = ?',
+            whereArgs: [id],
+          );
+        } else {
+          final used = await txn.rawQuery(
+            'SELECT 1 FROM meals WHERE type = ? LIMIT 1',
+            [id],
+          );
+          if (used.isNotEmpty) {
+            throw StateError('Meal type $id is in use; pass moveTo');
+          }
+        }
+        await txn.delete('meal_types', where: 'id = ?', whereArgs: [id]);
+      });
+
   // ---- Meals --------------------------------------------------------------
 
   Future<List<Meal>> meals() async {

@@ -9,6 +9,7 @@ import '../data/database.dart';
 import '../data/format.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import 'meal_types_screen.dart';
 import 'shell.dart';
 import 'widgets/common.dart';
 
@@ -149,6 +150,30 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   child: Column(
                     children: [
+                      Tap(
+                        onTap: () => openMealTypes(context),
+                        radius: 0,
+                        child: row(
+                          title: 'Meal types',
+                          subtitle: data.visibleTypes
+                              .map((t) => t.name)
+                              .join(' · '),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                plural(data.mealTypes.length, 'type'),
+                                style: sans(14, color: c.inkA(.5)),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 20,
+                                color: c.inkA(.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       row(
                         title: 'Default unit',
                         subtitle: 'Pre-filled for new food items',

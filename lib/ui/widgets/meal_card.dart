@@ -31,14 +31,14 @@ class MealCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              MealBadge(meal.type),
+              MealBadge(data.typeName(meal)),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      meal.type.label,
+                      data.typeName(meal),
                       style: sans(
                         16.5,
                         weight: FontWeight.w700,

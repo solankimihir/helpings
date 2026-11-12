@@ -21,7 +21,7 @@ void main() {
 
   Meal sampleMeal(String id, {String date = '2026-11-12'}) => Meal(
     id: id,
-    type: MealType.lunch,
+    typeId: 'lunch',
     date: date,
     time: '13:15',
     notes: 'Office canteen',
@@ -82,7 +82,7 @@ void main() {
     final meals = await repo.meals();
     expect(meals, hasLength(1));
     final m = meals.single;
-    expect(m.type, MealType.lunch);
+    expect(m.typeId, 'lunch');
     expect(m.notes, 'Office canteen');
     expect(m.entries.map((e) => e.nameSnapshot), ['Roti', 'Sambar']);
     expect(m.entries[1].calories, isNull);
@@ -96,7 +96,7 @@ void main() {
     await repo.saveMeal(
       Meal(
         id: 'm1',
-        type: MealType.dinner,
+        typeId: 'dinner',
         date: '2026-11-12',
         time: '20:00',
         entries: const [
@@ -105,7 +105,7 @@ void main() {
       ),
     );
     final m = (await repo.meals()).single;
-    expect(m.type, MealType.dinner);
+    expect(m.typeId, 'dinner');
     expect(m.entries.single.nameSnapshot, 'Dal');
     expect(m.totals.complete, isTrue);
   });
@@ -122,7 +122,7 @@ void main() {
     await repo.saveMeal(
       Meal(
         id: 'm1',
-        type: MealType.lunch,
+        typeId: 'lunch',
         date: '2026-11-12',
         time: '12:00',
         entries: [

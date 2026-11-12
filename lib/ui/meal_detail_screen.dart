@@ -127,7 +127,7 @@ class _DetailBody extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.fromLTRB(20, 8, 20, 40),
       children: [
-        Text(meal.type.label, style: serif(38, color: c.ink)),
+        Text(data.typeName(meal), style: serif(38, color: c.ink)),
         const SizedBox(height: 2),
         Text(
           '${longDate(parseKey(meal.date))} · ${fmtTime(meal.time)}',

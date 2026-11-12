@@ -31,16 +31,30 @@ class AppData {
     required this.items,
     required this.meals,
     required this.defaultUnit,
+    this.mealTypes = const [],
     this.themeMode = ThemeMode.system,
     this.lastBackupAt,
     this.autoBackup,
-  }) : _byId = {for (final i in items) i.id: i};
+  }) : _byId = {for (final i in items) i.id: i},
+       _typeById = {for (final t in mealTypes) t.id: t};
 
   final List<FoodItem> items;
 
   /// Oldest first.
   final List<Meal> meals;
   final FoodUnit defaultUnit;
+
+  /// Every meal type, hidden ones included, in display order.
+  final List<MealType> mealTypes;
+  final Map<String, MealType> _typeById;
+
+  MealType? typeById(String id) => _typeById[id];
+
+  /// Display name of a meal's type.
+  String typeName(Meal m) => _typeById[m.typeId]?.name ?? 'Meal';
+
+  /// Types offered for new meals.
+  List<MealType> get visibleTypes => mealTypes.where((t) => t.active).toList();
 
   /// Light, dark, or follow the device.
   final ThemeMode themeMode;
@@ -120,12 +134,14 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       repo.items(),
       repo.meals(),
       repo.settings(),
+      repo.mealTypes(),
     ]);
     final settings = results[2] as Map<String, String?>;
     final folder = settings[_kAutoFolder];
     return AppData(
       items: results[0] as List<FoodItem>,
       meals: results[1] as List<Meal>,
+      mealTypes: results[3] as List<MealType>,
       defaultUnit: FoodUnit.tryParse(settings[_kDefaultUnit]) ?? FoodUnit.piece,
       themeMode: _parseThemeMode(settings[_kThemeMode]),
       lastBackupAt: DateTime.tryParse(settings[_kLastBackup] ?? ''),
@@ -170,6 +186,38 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
     var added = 0;
     await _mutate((r) async => added = await r.restoreDefaultItems());
     return added;
+  }
+
+  // ---- Meal types ---------------------------------------------------------
+
+  /// Throws [DuplicateNameException]. Returns the saved type.
+  Future<MealType> saveMealType(MealType type) async {
+    if (!type.active) _checkNotLastVisible(type.id);
+    await _mutate((r) => r.saveMealType(type));
+    return type;
+  }
+
+  Future<void> setMealTypeActive(String id, bool active) async {
+    final t = state.requireValue.typeById(id);
+    if (t != null) await saveMealType(t.copyWith(active: active));
+  }
+
+  Future<void> reorderMealTypes(List<String> ids) =>
+      _mutate((r) => r.reorderMealTypes(ids));
+
+  Future<int> mealTypeUsageCount(String id) async =>
+      (await _repo).mealTypeUsageCount(id);
+
+  /// Moves the type's meals to [moveTo] (required if any use it), then
+  /// deletes it. The last remaining visible type can't be deleted.
+  Future<void> deleteMealType(String id, {String? moveTo}) {
+    _checkNotLastVisible(id);
+    return _mutate((r) => r.deleteMealType(id, moveTo: moveTo));
+  }
+
+  void _checkNotLastVisible(String id) {
+    final others = state.requireValue.visibleTypes.where((t) => t.id != id);
+    if (others.isEmpty) throw const LastMealTypeException();
   }
 
   Future<void> setDefaultUnit(FoodUnit u) =>
@@ -301,3 +349,10 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
 final appDataProvider = AsyncNotifierProvider<AppDataNotifier, AppData>(
   AppDataNotifier.new,
 );
+
+/// Hiding or deleting would leave no type to log a meal with.
+class LastMealTypeException implements Exception {
+  const LastMealTypeException();
+  @override
+  String toString() => 'Keep at least one meal type visible.';
+}

@@ -22,7 +22,7 @@ void main() {
         await r.saveMeal(
           Meal(
             id: 'm',
-            type: MealType.lunch,
+            typeId: 'lunch',
             date: todayKey(),
             time: '12:00',
             entries: const [MealEntry(id: 'e', nameSnapshot: 'Dal')],

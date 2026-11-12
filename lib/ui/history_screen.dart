@@ -24,14 +24,14 @@ class HistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
-  /// null = All.
-  MealType? _filter;
+  /// Meal type id; null = All.
+  String? _filter;
 
   List<_DayGroup> _groups(AppData data) {
     final groups = <_DayGroup>[];
     // Newest day first; within a day, earliest meal first.
     for (final m in data.meals.reversed) {
-      if (_filter != null && m.type != _filter) continue;
+      if (_filter != null && m.typeId != _filter) continue;
       if (groups.isEmpty || groups.last.date != m.date) {
         groups.add(_DayGroup(m.date));
       }
@@ -42,11 +42,11 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
     return groups;
   }
 
-  Future<bool> _confirmDelete(Meal m) => confirm(
+  Future<bool> _confirmDelete(Meal m, String typeName) => confirm(
     context,
-    title: 'Delete ${m.type.label.toLowerCase()}?',
+    title: 'Delete ${typeName.toLowerCase()}?',
     message:
-        '${m.type.label} on ${dayGroupLabel(m.date)} at ${fmtTime(m.time)} '
+        '$typeName on ${dayGroupLabel(m.date)} at ${fmtTime(m.time)} '
         'will be removed. This can’t be undone.',
     action: 'Delete',
   );
@@ -55,6 +55,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   Widget build(BuildContext context) {
     final data = ref.watch(appDataProvider).requireValue;
     final c = context.c;
+    // Visible types, plus hidden ones that past meals still use.
+    final used = {for (final m in data.meals) m.typeId};
+    final filterTypes = [
+      for (final t in data.mealTypes)
+        if (t.active || used.contains(t.id)) t,
+    ];
+    // A filter on a type that was since deleted would show nothing.
+    if (_filter != null && data.typeById(_filter!) == null) _filter = null;
     final groups = _groups(data);
 
     return SafeArea(
@@ -72,13 +80,13 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
               children: [
-                for (final t in <MealType?>[null, ...MealType.values])
+                for (final t in <MealType?>[null, ...filterTypes])
                   Padding(
                     padding: const EdgeInsets.only(right: 7),
                     child: AppChip(
-                      label: t?.label ?? 'All',
-                      selected: t == _filter,
-                      onTap: () => setState(() => _filter = t),
+                      label: t?.name ?? 'All',
+                      selected: t?.id == _filter,
+                      onTap: () => setState(() => _filter = t?.id),
                     ),
                   ),
               ],
@@ -106,8 +114,9 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
                     itemCount: groups.length,
                     itemBuilder: (context, i) => _GroupView(
                       group: groups[i],
+                      typeName: data.typeName,
                       onOpen: (m) => openMealDetail(context, m.id),
-                      confirmDelete: _confirmDelete,
+                      confirmDelete: (m) => _confirmDelete(m, data.typeName(m)),
                       onDelete: (m) =>
                           ref.read(appDataProvider.notifier).deleteMeal(m.id),
                     ),
@@ -122,12 +131,14 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
 class _GroupView extends StatelessWidget {
   const _GroupView({
     required this.group,
+    required this.typeName,
     required this.onOpen,
     required this.confirmDelete,
     required this.onDelete,
   });
 
   final _DayGroup group;
+  final String Function(Meal) typeName;
   final ValueChanged<Meal> onOpen;
   final Future<bool> Function(Meal) confirmDelete;
   final ValueChanged<Meal> onDelete;
@@ -186,6 +197,7 @@ class _GroupView extends StatelessWidget {
                     ),
                     child: _HistoryRow(
                       meal: m,
+                      typeName: typeName(m),
                       showDivider: i > 0,
                       onTap: () => onOpen(m),
                     ),
@@ -202,11 +214,13 @@ class _GroupView extends StatelessWidget {
 class _HistoryRow extends StatelessWidget {
   const _HistoryRow({
     required this.meal,
+    required this.typeName,
     required this.showDivider,
     required this.onTap,
   });
 
   final Meal meal;
+  final String typeName;
   final bool showDivider;
   final VoidCallback onTap;
 
@@ -230,7 +244,7 @@ class _HistoryRow extends StatelessWidget {
           ),
           child: Row(
             children: [
-              MealBadge(meal.type, size: 32),
+              MealBadge(typeName, size: 32),
               const SizedBox(width: 12),
               Expanded(
                 child: Column(
@@ -238,7 +252,7 @@ class _HistoryRow extends StatelessWidget {
                   children: [
                     Text.rich(
                       TextSpan(
-                        text: meal.type.label,
+                        text: typeName,
                         children: [
                           TextSpan(
                             text: ' — ${fmtTime(meal.time)}',

@@ -2,6 +2,7 @@ import 'dart:io';
 import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
+import 'package:material_ui/material_ui.dart' show Size;
 import 'package:helpings/data/backup.dart';
 import 'package:helpings/data/database.dart';
 import 'package:helpings/data/format.dart';
@@ -13,7 +14,7 @@ import 'helpers.dart';
 
 Meal _meal() => Meal(
   id: 'm',
-  type: MealType.lunch,
+  typeId: 'lunch',
   date: todayKey(),
   time: '12:00',
   entries: const [MealEntry(id: 'e', nameSnapshot: 'Dal')],
@@ -70,6 +71,10 @@ void main() {
   testWidgets('settings: save copy hands the database to the saver', (
     tester,
   ) async {
+    // Every Settings card on screen, clear of the floating tab bar.
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     String? savedName;
     Uint8List? savedBytes;
     var accept = false;
@@ -97,7 +102,6 @@ void main() {
     await settle();
     await tester.tap(find.text('Settings'));
     await settle();
-    await tester.scrollUntilVisible(find.text('Save copy'), 100);
     expect(find.text('Save a copy of your data to a file'), findsOneWidget);
 
     // Cancelling the dialog records nothing.

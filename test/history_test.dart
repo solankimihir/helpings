@@ -7,9 +7,9 @@ import 'package:material_ui/material_ui.dart';
 import 'helpers.dart';
 
 Future<void> _seed(Repository repo) async {
-  Meal m(String id, MealType t, int day, String time, double? cal) => Meal(
+  Meal m(String id, String t, int day, String time, double? cal) => Meal(
     id: id,
-    type: t,
+    typeId: t,
     date: shiftKey(day),
     time: time,
     entries: [
@@ -17,9 +17,9 @@ Future<void> _seed(Repository repo) async {
       MealEntry(id: '$id-2', nameSnapshot: 'Tea', qty: 1, calories: cal),
     ],
   );
-  await repo.saveMeal(m('a', MealType.breakfast, 0, '08:30', 90));
-  await repo.saveMeal(m('b', MealType.dinner, -1, '20:20', null));
-  await repo.saveMeal(m('c', MealType.lunch, -1, '13:00', 90));
+  await repo.saveMeal(m('a', 'breakfast', 0, '08:30', 90));
+  await repo.saveMeal(m('b', 'dinner', -1, '20:20', null));
+  await repo.saveMeal(m('c', 'lunch', -1, '13:00', 90));
 }
 
 void main() {

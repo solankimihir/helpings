@@ -1,26 +1,87 @@
 import 'package:flutter/foundation.dart';
 
-enum MealType {
-  breakfast('Breakfast'),
-  lunch('Lunch'),
-  dinner('Dinner'),
-  snack('Snack'),
-  other('Other');
+/// A kind of meal ("Breakfast", "Pre-workout"…). Fully user-editable; the
+/// built-ins are just seeded rows whose ids ('breakfast', 'lunch', …) match
+/// what v1 stored in `meals.type`.
+@immutable
+class MealType {
+  const MealType({
+    required this.id,
+    required this.name,
+    this.position = 0,
+    this.active = true,
+    this.startMinute,
+  });
 
-  const MealType(this.label);
-  final String label;
+  final String id;
+  final String name;
 
-  static MealType fromName(String name) =>
-      MealType.values.firstWhere((t) => t.name == name, orElse: () => other);
+  /// Order in chips and lists, ascending.
+  final int position;
 
-  /// Guess from the clock, as the design does.
-  static MealType forHour(int h) => h < 11
-      ? breakfast
-      : h < 15
-      ? lunch
-      : h < 18
-      ? snack
-      : dinner;
+  /// Hidden types stay on old meals but aren't offered for new ones.
+  final bool active;
+
+  /// "Usually starts at", minutes after midnight. Null: never auto-picked.
+  final int? startMinute;
+
+  MealType copyWith({
+    String? name,
+    int? position,
+    bool? active,
+    int? Function()? startMinute,
+  }) => MealType(
+    id: id,
+    name: name ?? this.name,
+    position: position ?? this.position,
+    active: active ?? this.active,
+    startMinute: startMinute != null ? startMinute() : this.startMinute,
+  );
+
+  Map<String, Object?> toRow() => {
+    'id': id,
+    'name': name,
+    'position': position,
+    'active': active ? 1 : 0,
+    'start_minute': startMinute,
+  };
+
+  factory MealType.fromRow(Map<String, Object?> r) => MealType(
+    id: r['id'] as String,
+    name: r['name'] as String,
+    position: r['position'] as int,
+    active: (r['active'] as int) == 1,
+    startMinute: r['start_minute'] as int?,
+  );
+
+  @override
+  bool operator ==(Object other) =>
+      other is MealType &&
+      other.id == id &&
+      other.name == name &&
+      other.position == position &&
+      other.active == active &&
+      other.startMinute == startMinute;
+
+  @override
+  int get hashCode => Object.hash(id, name, position, active, startMinute);
+}
+
+/// Picks the type for a new meal at [now]: the visible type whose start time
+/// passed most recently today, wrapping to last night's (e.g. Dinner at 2am)
+/// before the first start. With no start times at all, the first visible
+/// type. Null only if there are no visible types.
+MealType? guessMealType(Iterable<MealType> types, DateTime now) {
+  final visible = types.where((t) => t.active).toList()
+    ..sort((a, b) => a.position.compareTo(b.position));
+  final timed = visible.where((t) => t.startMinute != null).toList()
+    ..sort((a, b) => a.startMinute!.compareTo(b.startMinute!));
+  if (timed.isEmpty) return visible.isEmpty ? null : visible.first;
+  final minute = now.hour * 60 + now.minute;
+  return timed.lastWhere(
+    (t) => t.startMinute! <= minute,
+    orElse: () => timed.last,
+  );
 }
 
 enum FoodUnit {
@@ -149,7 +210,7 @@ class MealEntry {
 class Meal {
   const Meal({
     required this.id,
-    required this.type,
+    required this.typeId,
     required this.date,
     required this.time,
     this.notes = '',
@@ -157,7 +218,9 @@ class Meal {
   });
 
   final String id;
-  final MealType type;
+
+  /// [MealType.id]; stored in the `type` column.
+  final String typeId;
 
   /// Local calendar day, `YYYY-MM-DD`.
   final String date;
@@ -173,7 +236,7 @@ class Meal {
 
   Map<String, Object?> toRow() => {
     'id': id,
-    'type': type.name,
+    'type': typeId,
     'date': date,
     'time': time,
     'notes': notes,
@@ -181,7 +244,7 @@ class Meal {
 
   factory Meal.fromRow(Map<String, Object?> r, List<MealEntry> entries) => Meal(
     id: r['id'] as String,
-    type: MealType.fromName(r['type'] as String),
+    typeId: r['type'] as String,
     date: r['date'] as String,
     time: r['time'] as String,
     notes: (r['notes'] as String?) ?? '',

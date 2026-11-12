@@ -18,7 +18,7 @@ import 'helpers.dart';
 
 Meal _meal(String id, String food) => Meal(
   id: id,
-  type: MealType.lunch,
+  typeId: 'lunch',
   date: todayKey(),
   time: '12:00',
   entries: [MealEntry(id: '$id-e', nameSnapshot: food)],

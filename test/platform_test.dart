@@ -52,7 +52,7 @@ void main() {
       seed: (r) => r.saveMeal(
         Meal(
           id: 'm',
-          type: MealType.dinner,
+          typeId: 'dinner',
           date: todayKey(),
           time: '20:00',
           entries: const [

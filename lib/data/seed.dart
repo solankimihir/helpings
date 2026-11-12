@@ -38,3 +38,29 @@ Future<int> insertDefaultItems(DatabaseExecutor db) async {
   }
   return added;
 }
+
+/// Starter meal types: (id, name, start time as minutes after midnight).
+/// Ids match the values v1 stored in `meals.type`, so old meals keep their
+/// type with no rewrite.
+const defaultMealTypes = <(String, String, int?)>[
+  ('breakfast', 'Breakfast', 5 * 60),
+  ('lunch', 'Lunch', 11 * 60),
+  ('dinner', 'Dinner', 18 * 60),
+  ('snack', 'Snack', 15 * 60),
+  ('other', 'Other', null),
+];
+
+Future<void> insertDefaultMealTypes(DatabaseExecutor db) async {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  for (var i = 0; i < defaultMealTypes.length; i++) {
+    final (id, name, start) = defaultMealTypes[i];
+    await db.insert('meal_types', {
+      'id': id,
+      'name': name,
+      'position': i,
+      'active': 1,
+      'start_minute': start,
+      'created_at': now,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+}

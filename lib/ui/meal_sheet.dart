@@ -7,6 +7,7 @@ import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'item_sheet.dart';
 import 'shell.dart';
+import 'meal_type_sheet.dart';
 import 'widgets/common.dart';
 
 /// Add a new meal (on [date], default today), or edit [editing].
@@ -68,7 +69,8 @@ class MealSheet extends ConsumerStatefulWidget {
 }
 
 class _MealSheetState extends ConsumerState<MealSheet> {
-  late MealType _type;
+  /// [MealType.id].
+  late String _typeId;
   late String _date;
   late String _time;
   late final TextEditingController _notes;
@@ -83,12 +85,16 @@ class _MealSheetState extends ConsumerState<MealSheet> {
     final m = widget.editing;
     final data = ref.read(appDataProvider).requireValue;
     if (m == null) {
-      _type = MealType.forHour(DateTime.now().hour);
+      _typeId =
+          (guessMealType(data.mealTypes, DateTime.now()) ??
+                  data.mealTypes.firstOrNull)
+              ?.id ??
+          'other';
       _date = widget.date ?? todayKey();
       _time = nowTime();
       _notes = TextEditingController();
     } else {
-      _type = m.type;
+      _typeId = m.typeId;
       _date = m.date;
       _time = m.time;
       _notes = TextEditingController(text: m.notes);
@@ -166,7 +172,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
     final isNew = widget.editing == null;
     final meal = Meal(
       id: widget.editing?.id ?? newId(),
-      type: _type,
+      typeId: _typeId,
       date: _date,
       time: _time,
       notes: _notes.text.trim(),
@@ -219,12 +225,24 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                 spacing: 7,
                 runSpacing: 7,
                 children: [
-                  for (final t in MealType.values)
-                    AppChip(
-                      label: t.label,
-                      selected: t == _type,
-                      onTap: () => setState(() => _type = t),
-                    ),
+                  for (final t in data.mealTypes)
+                    // Hidden types only show when this meal already uses one.
+                    if (t.active || t.id == _typeId)
+                      AppChip(
+                        label: t.name,
+                        selected: t.id == _typeId,
+                        onTap: () => setState(() => _typeId = t.id),
+                      ),
+                  AppChip(
+                    label: '+ New',
+                    selected: false,
+                    onTap: () async {
+                      final created = await showMealTypeSheet(context);
+                      if (created != null && mounted) {
+                        setState(() => _typeId = created.id);
+                      }
+                    },
+                  ),
                 ],
               ),
               const SizedBox(height: 14),

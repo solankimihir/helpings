@@ -446,8 +446,10 @@ class _DashedBorderPainter extends CustomPainter {
 
 /// Rounded-square badge with the meal type's initial.
 class MealBadge extends StatelessWidget {
-  const MealBadge(this.type, {super.key, this.size = 34});
-  final MealType type;
+  const MealBadge(this.name, {super.key, this.size = 34});
+
+  /// Meal type name; the badge shows its first character (emoji included).
+  final String name;
   final double size;
 
   @override
@@ -462,7 +464,7 @@ class MealBadge extends StatelessWidget {
         borderRadius: BorderRadius.circular(size * .35),
       ),
       child: Text(
-        type.label[0],
+        name.isEmpty ? '·' : name.characters.first.toUpperCase(),
         style: sans(size * .38, weight: FontWeight.w700, color: c.greenText),
       ),
     );

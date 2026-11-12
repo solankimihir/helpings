@@ -14,7 +14,7 @@ class AppDatabase {
   final Database db;
   final DatabaseFactory _factory;
 
-  static const version = 1;
+  static const version = 2;
   static const fileName = 'helpings.db';
 
   /// Opens (creating on first launch) the on-device database.
@@ -69,7 +69,17 @@ class AppDatabase {
   }
 
   /// User tables, parents before children.
-  static const _tables = ['food_items', 'meals', 'meal_entries', 'settings'];
+  static const _tables = [
+    'food_items',
+    'meal_types',
+    'meals',
+    'meal_entries',
+    'settings',
+  ];
+
+  /// Tables every Helpings backup has, back to schema v1. Later tables are
+  /// created when the backup is migrated.
+  static const _v1Tables = ['food_items', 'meals', 'meal_entries', 'settings'];
 
   /// Replaces every row with the contents of the backup [bytes], in a single
   /// transaction: on any failure the current data is left untouched.
@@ -145,7 +155,7 @@ class AppDatabase {
       final names = (await bk.rawQuery(
         "SELECT name FROM sqlite_master WHERE type = 'table'",
       )).map((r) => r['name']).toSet();
-      if (v is! int || v < 1 || !_tables.every(names.contains)) {
+      if (v is! int || v < 1 || !_v1Tables.every(names.contains)) {
         throw const BackupFormatException("This file isn't a Helpings backup.");
       }
       if (v > version) {
@@ -205,6 +215,23 @@ class AppDatabase {
           value TEXT
         )''');
       await b.commit(noResult: true);
+    }
+    if (from < 2) {
+      await db.execute('''
+        CREATE TABLE meal_types (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+          position INTEGER NOT NULL,
+          active INTEGER NOT NULL DEFAULT 1,
+          start_minute INTEGER,
+          created_at INTEGER NOT NULL
+        )''');
+      await insertDefaultMealTypes(db);
+      // v1 only ever wrote the five built-in ids; this is a safety net.
+      await db.execute(
+        "UPDATE meals SET type = 'other' "
+        'WHERE type NOT IN (SELECT id FROM meal_types)',
+      );
     }
   }
 
