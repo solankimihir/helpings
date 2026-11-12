@@ -32,6 +32,7 @@ class AppData {
     required this.meals,
     required this.defaultUnit,
     this.mealTypes = const [],
+    this.combos = const [],
     this.themeMode = ThemeMode.system,
     this.lastBackupAt,
     this.autoBackup,
@@ -52,6 +53,9 @@ class AppData {
 
   /// Display name of a meal's type.
   String typeName(Meal m) => _typeById[m.typeId]?.name ?? 'Meal';
+
+  /// Saved combos, in display order.
+  final List<Combo> combos;
 
   /// Types offered for new meals.
   List<MealType> get visibleTypes => mealTypes.where((t) => t.active).toList();
@@ -135,6 +139,7 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       repo.meals(),
       repo.settings(),
       repo.mealTypes(),
+      repo.combos(),
     ]);
     final settings = results[2] as Map<String, String?>;
     final folder = settings[_kAutoFolder];
@@ -142,6 +147,7 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       items: results[0] as List<FoodItem>,
       meals: results[1] as List<Meal>,
       mealTypes: results[3] as List<MealType>,
+      combos: results[4] as List<Combo>,
       defaultUnit: FoodUnit.tryParse(settings[_kDefaultUnit]) ?? FoodUnit.piece,
       themeMode: _parseThemeMode(settings[_kThemeMode]),
       lastBackupAt: DateTime.tryParse(settings[_kLastBackup] ?? ''),
@@ -187,6 +193,19 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
     await _mutate((r) async => added = await r.restoreDefaultItems());
     return added;
   }
+
+  // ---- Combos -------------------------------------------------------------
+
+  /// Throws [DuplicateNameException]. Returns the saved combo.
+  Future<Combo> saveCombo(Combo combo) async {
+    await _mutate((r) => r.saveCombo(combo));
+    return combo;
+  }
+
+  Future<void> reorderCombos(List<String> ids) =>
+      _mutate((r) => r.reorderCombos(ids));
+
+  Future<void> deleteCombo(String id) => _mutate((r) => r.deleteCombo(id));
 
   // ---- Meal types ---------------------------------------------------------
 

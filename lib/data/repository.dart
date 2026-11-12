@@ -162,6 +162,81 @@ class Repository {
         await txn.delete('meal_types', where: 'id = ?', whereArgs: [id]);
       });
 
+  // ---- Combos -------------------------------------------------------------
+
+  Future<List<Combo>> combos() async {
+    final rows = await _db.query('combos', orderBy: 'position, name');
+    final lines = await _db.query('combo_items', orderBy: 'combo_id, position');
+    final byCombo = <String, List<MealEntry>>{};
+    for (final r in lines) {
+      (byCombo[r['combo_id'] as String] ??= []).add(MealEntry.fromRow(r));
+    }
+    return [
+      for (final r in rows)
+        Combo(
+          id: r['id'] as String,
+          name: r['name'] as String,
+          position: r['position'] as int,
+          items: byCombo[r['id'] as String] ?? const [],
+        ),
+    ];
+  }
+
+  /// Inserts (at the end) or updates a combo and replaces its lines. Throws
+  /// [DuplicateNameException] if another combo already has the name.
+  Future<void> saveCombo(Combo combo) => _db.transaction((txn) async {
+    final clash = await txn.query(
+      'combos',
+      columns: ['name'],
+      where: 'name = ? COLLATE NOCASE AND id != ?',
+      whereArgs: [combo.name, combo.id],
+      limit: 1,
+    );
+    if (clash.isNotEmpty) {
+      throw DuplicateNameException(clash.first['name'] as String);
+    }
+    final updated = await txn.update(
+      'combos',
+      {'name': combo.name},
+      where: 'id = ?',
+      whereArgs: [combo.id],
+    );
+    if (updated == 0) {
+      final last = await txn.rawQuery(
+        'SELECT COALESCE(MAX(position), -1) + 1 AS p FROM combos',
+      );
+      await txn.insert('combos', {
+        'id': combo.id,
+        'name': combo.name,
+        'position': last.first['p'] as int,
+        'created_at': _now,
+      });
+    }
+    await txn.delete(
+      'combo_items',
+      where: 'combo_id = ?',
+      whereArgs: [combo.id],
+    );
+    for (var i = 0; i < combo.items.length; i++) {
+      final row = combo.items[i].toRow(combo.id, i)..remove('meal_id');
+      await txn.insert('combo_items', {...row, 'combo_id': combo.id});
+    }
+  });
+
+  Future<void> reorderCombos(List<String> ids) => _db.transaction((txn) async {
+    for (var i = 0; i < ids.length; i++) {
+      await txn.update(
+        'combos',
+        {'position': i},
+        where: 'id = ?',
+        whereArgs: [ids[i]],
+      );
+    }
+  });
+
+  Future<void> deleteCombo(String id) =>
+      _db.delete('combos', where: 'id = ?', whereArgs: [id]);
+
   // ---- Meals --------------------------------------------------------------
 
   Future<List<Meal>> meals() async {

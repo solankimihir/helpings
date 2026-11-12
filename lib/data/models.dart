@@ -252,6 +252,31 @@ class Meal {
   );
 }
 
+/// A saved set of lines ("Usual breakfast: 2 Roti + Tea") added to a meal in
+/// one tap. Lines are copies, like [MealEntry]: editing a food item later
+/// doesn't change the combo.
+@immutable
+class Combo {
+  const Combo({
+    required this.id,
+    required this.name,
+    this.position = 0,
+    this.items = const [],
+  });
+
+  final String id;
+  final String name;
+  final int position;
+  final List<MealEntry> items;
+
+  Combo copyWith({String? name, List<MealEntry>? items}) => Combo(
+    id: id,
+    name: name ?? this.name,
+    position: position,
+    items: items ?? this.items,
+  );
+}
+
 /// Calories are never estimated: a total is only "complete" when every line
 /// has a value.
 @immutable

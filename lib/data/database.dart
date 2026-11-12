@@ -14,7 +14,7 @@ class AppDatabase {
   final Database db;
   final DatabaseFactory _factory;
 
-  static const version = 2;
+  static const version = 3;
   static const fileName = 'helpings.db';
 
   /// Opens (creating on first launch) the on-device database.
@@ -74,6 +74,8 @@ class AppDatabase {
     'meal_types',
     'meals',
     'meal_entries',
+    'combos',
+    'combo_items',
     'settings',
   ];
 
@@ -231,6 +233,29 @@ class AppDatabase {
       await db.execute(
         "UPDATE meals SET type = 'other' "
         'WHERE type NOT IN (SELECT id FROM meal_types)',
+      );
+    }
+    if (from < 3) {
+      await db.execute('''
+        CREATE TABLE combos (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+          position INTEGER NOT NULL,
+          created_at INTEGER NOT NULL
+        )''');
+      await db.execute('''
+        CREATE TABLE combo_items (
+          id TEXT PRIMARY KEY,
+          combo_id TEXT NOT NULL REFERENCES combos(id) ON DELETE CASCADE,
+          item_id TEXT REFERENCES food_items(id) ON DELETE SET NULL,
+          name_snapshot TEXT NOT NULL,
+          qty REAL,
+          unit TEXT,
+          calories REAL,
+          position INTEGER NOT NULL
+        )''');
+      await db.execute(
+        'CREATE INDEX idx_combo_items_combo ON combo_items(combo_id)',
       );
     }
   }

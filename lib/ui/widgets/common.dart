@@ -817,3 +817,73 @@ void toast(BuildContext context, String message) {
       SnackBar(content: Text(message), duration: const Duration(seconds: 2)),
     );
 }
+
+/// Asks for a short piece of text (a name). Null if cancelled or left blank.
+Future<String?> promptText(
+  BuildContext context, {
+  required String title,
+  required String action,
+  String initial = '',
+  String hint = '',
+}) async {
+  final r = await showDialog<String>(
+    context: context,
+    builder: (_) => _PromptDialog(
+      title: title,
+      action: action,
+      initial: initial,
+      hint: hint,
+    ),
+  );
+  final v = r?.trim();
+  return v == null || v.isEmpty ? null : v;
+}
+
+/// Owns its controller so it outlives the dialog's closing animation.
+class _PromptDialog extends StatefulWidget {
+  const _PromptDialog({
+    required this.title,
+    required this.action,
+    required this.initial,
+    required this.hint,
+  });
+  final String title;
+  final String action;
+  final String initial;
+  final String hint;
+
+  @override
+  State<_PromptDialog> createState() => _PromptDialogState();
+}
+
+class _PromptDialogState extends State<_PromptDialog> {
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.title),
+    content: TextField(
+      controller: _controller,
+      autofocus: true,
+      textCapitalization: TextCapitalization.sentences,
+      decoration: InputDecoration(hintText: widget.hint),
+      onSubmitted: (v) => Navigator.pop(context, v),
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      TextButton(
+        onPressed: () => Navigator.pop(context, _controller.text),
+        child: Text(widget.action),
+      ),
+    ],
+  );
+}

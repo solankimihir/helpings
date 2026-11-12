@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../data/format.dart';
 import '../data/models.dart';
+import '../data/repository.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'item_sheet.dart';
@@ -207,24 +208,63 @@ class _MealSheetState extends ConsumerState<MealSheet> {
     if (created != null && mounted) _addFromItem(created, fallbackUnit);
   }
 
+  /// The draft rows as fresh entries, or null (with [_error] set) if a
+  /// quantity or calorie value isn't a number.
+  List<MealEntry>? _validEntries() {
+    for (final r in _rows) {
+      final q = r.qty.text.trim();
+      if (q.isNotEmpty && parseNum(q) == null) {
+        setState(() => _error = 'Quantity must be a number.');
+        return null;
+      }
+      final cal = r.cal.text.trim();
+      if (cal.isNotEmpty && parseNum(cal) == null) {
+        setState(() => _error = 'Calories must be a number.');
+        return null;
+      }
+    }
+    return [
+      for (final r in _rows)
+        MealEntry(
+          id: newId(),
+          itemId: r.itemId,
+          nameSnapshot: r.name,
+          qty: r.qty.text.trim().isEmpty ? null : parseNum(r.qty.text),
+          unit: r.unit,
+          calories: r.cal.text.trim().isEmpty ? null : parseNum(r.cal.text),
+        ),
+    ];
+  }
+
+  /// Saves the current lines as a named combo for one-tap reuse.
+  Future<void> _saveAsCombo() async {
+    final entries = _validEntries();
+    if (entries == null) return;
+    final name = await promptText(
+      context,
+      title: 'Save as combo',
+      action: 'Save',
+      hint: 'e.g. Usual breakfast',
+    );
+    if (name == null || !mounted) return;
+    try {
+      await ref
+          .read(appDataProvider.notifier)
+          .saveCombo(Combo(id: newId(), name: name, items: entries));
+      if (mounted) setState(() => _error = '');
+    } on DuplicateNameException catch (e) {
+      if (mounted) setState(() => _error = 'A combo named $e');
+    }
+  }
+
   Future<void> _save() async {
     if (_saving) return;
     if (_rows.isEmpty) {
       setState(() => _error = 'Add at least one meal item before saving.');
       return;
     }
-    for (final r in _rows) {
-      final q = r.qty.text.trim();
-      if (q.isNotEmpty && parseNum(q) == null) {
-        setState(() => _error = 'Quantity must be a number.');
-        return;
-      }
-      final cal = r.cal.text.trim();
-      if (cal.isNotEmpty && parseNum(cal) == null) {
-        setState(() => _error = 'Calories must be a number.');
-        return;
-      }
-    }
+    final entries = _validEntries();
+    if (entries == null) return;
     final isNew = widget.editing == null;
     final meal = Meal(
       id: widget.editing?.id ?? newId(),
@@ -232,17 +272,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
       date: _date,
       time: _time,
       notes: _notes.text.trim(),
-      entries: [
-        for (final r in _rows)
-          MealEntry(
-            id: newId(),
-            itemId: r.itemId,
-            nameSnapshot: r.name,
-            qty: r.qty.text.trim().isEmpty ? null : parseNum(r.qty.text),
-            unit: r.unit,
-            calories: r.cal.text.trim().isEmpty ? null : parseNum(r.cal.text),
-          ),
-      ],
+      entries: entries,
     );
     setState(() => _saving = true);
     final nav = Navigator.of(context);
@@ -376,6 +406,43 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                     onUnit: (u) => setState(() => r.unit = u),
                   ),
                 ),
+              if (_rows.isNotEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Pill(
+                    label: '☆ Save as combo',
+                    style: PillStyle.ghost,
+                    color: c.link,
+                    fontSize: 13,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 4,
+                      vertical: 6,
+                    ),
+                    onTap: _saveAsCombo,
+                  ),
+                ),
+              if (data.combos.isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Wrap(
+                  spacing: 7,
+                  runSpacing: 7,
+                  children: [
+                    for (final combo in data.combos)
+                      Pill(
+                        label: '★ ${combo.name}',
+                        style: PillStyle.white,
+                        fontSize: 13,
+                        onTap: () {
+                          setState(() {
+                            _error = '';
+                            _addEntries(combo.items, data);
+                          });
+                          _revealPicker();
+                        },
+                      ),
+                  ],
+                ),
+              ],
               const SizedBox(height: 6),
               _PickPanel(
                 key: _pickKey,

@@ -9,6 +9,7 @@ import '../data/database.dart';
 import '../data/format.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import 'combos_screen.dart';
 import 'meal_types_screen.dart';
 import 'shell.dart';
 import 'widgets/common.dart';
@@ -163,6 +164,30 @@ class SettingsScreen extends ConsumerWidget {
                             children: [
                               Text(
                                 plural(data.mealTypes.length, 'type'),
+                                style: sans(14, color: c.inkA(.5)),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 20,
+                                color: c.inkA(.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                      Tap(
+                        onTap: () => openCombos(context),
+                        radius: 0,
+                        child: row(
+                          title: 'Combos',
+                          subtitle: data.combos.isEmpty
+                              ? 'Items you often eat together, added in one tap'
+                              : data.combos.map((x) => x.name).join(' · '),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                '${data.combos.length}',
                                 style: sans(14, color: c.inkA(.5)),
                               ),
                               Icon(

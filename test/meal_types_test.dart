@@ -10,46 +10,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
 import 'helpers.dart';
-
-/// The schema as shipped in v1, before meal types became a table.
-const _v1Schema = [
-  '''CREATE TABLE food_items (id TEXT PRIMARY KEY,
-     name TEXT NOT NULL COLLATE NOCASE UNIQUE, default_calories REAL,
-     default_unit TEXT, active INTEGER NOT NULL DEFAULT 1,
-     created_at INTEGER NOT NULL)''',
-  '''CREATE TABLE meals (id TEXT PRIMARY KEY, type TEXT NOT NULL,
-     date TEXT NOT NULL, time TEXT NOT NULL, notes TEXT NOT NULL DEFAULT '',
-     created_at INTEGER NOT NULL, updated_at INTEGER NOT NULL)''',
-  '''CREATE TABLE meal_entries (id TEXT PRIMARY KEY,
-     meal_id TEXT NOT NULL REFERENCES meals(id) ON DELETE CASCADE,
-     item_id TEXT REFERENCES food_items(id) ON DELETE SET NULL,
-     name_snapshot TEXT NOT NULL, qty REAL, unit TEXT, calories REAL,
-     position INTEGER NOT NULL)''',
-  'CREATE TABLE settings (key TEXT PRIMARY KEY, value TEXT)',
-];
-
-final _f = databaseFactoryFfiNoIsolate;
-
-/// A v1 database file with one 'snack' meal and one with an unknown type.
-Future<String> _writeV1(String path) async {
-  final db = await _f.openDatabase(path);
-  for (final sql in _v1Schema) {
-    await db.execute(sql);
-  }
-  for (final (id, type) in [('m1', 'snack'), ('m2', 'mystery')]) {
-    await db.insert('meals', {
-      'id': id,
-      'type': type,
-      'date': '2026-11-01',
-      'time': '16:00',
-      'created_at': 0,
-      'updated_at': 0,
-    });
-  }
-  await db.setVersion(1);
-  await db.close();
-  return path;
-}
+import 'schema_fixtures.dart';
 
 Meal _meal(String id, String typeId) => Meal(
   id: id,
@@ -111,8 +72,8 @@ void main() {
   });
 
   test('v1 database migrates: types seeded, meals keep theirs', () async {
-    final path = await _writeV1('${dir.path}/v1.db');
-    final db = await AppDatabase.open(factory: _f, path: path);
+    final path = await writeV1('${dir.path}/v1.db');
+    final db = await AppDatabase.open(factory: schemaFactory, path: path);
     addTearDown(db.close);
     final r = Repository(db);
     expect((await r.mealTypes()).map((t) => t.name), [
@@ -127,8 +88,11 @@ void main() {
   });
 
   test('restoring a v1 backup into the current schema', () async {
-    final bytes = File(await _writeV1('${dir.path}/v1.db')).readAsBytesSync();
-    final db = await AppDatabase.open(factory: _f, path: '${dir.path}/live.db');
+    final bytes = File(await writeV1('${dir.path}/v1.db')).readAsBytesSync();
+    final db = await AppDatabase.open(
+      factory: schemaFactory,
+      path: '${dir.path}/live.db',
+    );
     addTearDown(db.close);
     final r = Repository(db);
     await r.saveMealType(const MealType(id: 'pre', name: 'Pre-workout'));
@@ -149,7 +113,7 @@ void main() {
     late Repository r;
     setUp(() async {
       final db = await AppDatabase.open(
-        factory: _f,
+        factory: schemaFactory,
         path: inMemoryDatabasePath,
       );
       addTearDown(db.close);
