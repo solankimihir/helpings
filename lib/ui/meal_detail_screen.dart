@@ -78,6 +78,15 @@ class _MealDetailScreenState extends ConsumerState<MealDetailScreen> {
                         ),
                         const Spacer(),
                         Pill(
+                          label: 'Log again',
+                          style: PillStyle.white,
+                          onTap: () {
+                            setState(() => _confirmDelete = false);
+                            showMealSheet(context, template: meal);
+                          },
+                        ),
+                        const SizedBox(width: 8),
+                        Pill(
                           label: 'Edit',
                           style: PillStyle.white,
                           onTap: () => _edit(meal),

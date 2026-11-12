@@ -10,10 +10,12 @@ import 'shell.dart';
 import 'meal_type_sheet.dart';
 import 'widgets/common.dart';
 
-/// Add a new meal (on [date], default today), or edit [editing].
+/// Add a new meal (on [date], default today), or edit [editing]. A
+/// [template] pre-fills a new meal from an existing one ("Log again").
 Future<void> showMealSheet(
   BuildContext context, {
   Meal? editing,
+  Meal? template,
   String? date,
 }) {
   return showModalBottomSheet<void>(
@@ -33,7 +35,7 @@ Future<void> showMealSheet(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
       child: FractionallySizedBox(
         heightFactor: .92,
-        child: MealSheet(editing: editing, date: date),
+        child: MealSheet(editing: editing, template: template, date: date),
       ),
     ),
   );
@@ -64,8 +66,11 @@ class _DraftRow {
 }
 
 class MealSheet extends ConsumerStatefulWidget {
-  const MealSheet({super.key, this.editing, this.date});
+  const MealSheet({super.key, this.editing, this.template, this.date});
   final Meal? editing;
+
+  /// Copied into a new meal: type, items and notes. Ignored when editing.
+  final Meal? template;
 
   /// [dayKey] for a new meal; today when null. Ignored when editing.
   final String? date;
@@ -92,31 +97,60 @@ class _MealSheetState extends ConsumerState<MealSheet> {
     final m = widget.editing;
     final data = ref.read(appDataProvider).requireValue;
     if (m == null) {
+      final t = widget.template;
       _typeId =
+          t?.typeId ??
           (guessMealType(data.mealTypes, DateTime.now()) ??
                   data.mealTypes.firstOrNull)
               ?.id ??
           'other';
       _date = widget.date ?? todayKey();
       _time = nowTime();
-      _notes = TextEditingController();
+      _notes = TextEditingController(text: t?.notes ?? '');
+      if (t != null) _addEntries(t.entries, data);
     } else {
       _typeId = m.typeId;
       _date = m.date;
       _time = m.time;
       _notes = TextEditingController(text: m.notes);
-      for (final e in m.entries) {
-        _rows.add(
-          _DraftRow(
-            itemId: e.itemId,
-            name: data.displayName(e),
-            qty: fmtQty(e.qty),
-            unit: e.unit,
-            cal: fmtQty(e.calories),
-          ),
-        );
+      _addEntries(m.entries, data);
+    }
+  }
+
+  /// Appends editable copies of logged lines.
+  void _addEntries(List<MealEntry> entries, AppData data) {
+    for (final e in entries) {
+      _rows.add(
+        _DraftRow(
+          itemId: e.itemId,
+          name: data.displayName(e),
+          qty: fmtQty(e.qty),
+          unit: e.unit,
+          cal: fmtQty(e.calories),
+        ),
+      );
+    }
+  }
+
+  /// "yesterday’s Lunch", "today’s Lunch", or "Lunch from November 3".
+  static String _sameAsLabel(Meal prev, AppData data) {
+    final type = data.typeName(prev);
+    if (prev.date == shiftKey(-1)) return 'yesterday’s $type';
+    if (prev.date == todayKey()) return 'today’s $type';
+    return '$type from ${dayGroupLabel(prev.date)}';
+  }
+
+  /// The latest meal of the selected type on the day before this meal's
+  /// date, offered as a one-tap start for a new, still-empty meal.
+  Meal? _previousDayMeal(AppData data) {
+    if (widget.editing != null || _rows.isNotEmpty) return null;
+    final prev = dayKey(parseKey(_date).subtract(const Duration(days: 1)));
+    for (final m in data.meals.reversed) {
+      if (m.date == prev && m.typeId == _typeId && m.entries.isNotEmpty) {
+        return m;
       }
     }
+    return null;
   }
 
   @override
@@ -307,6 +341,21 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                 ],
               ),
               const SectionLabel('Items'),
+              if (_previousDayMeal(data) case final prev?)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 10),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Pill(
+                      label: '↻ Same as ${_sameAsLabel(prev, data)}',
+                      style: PillStyle.white,
+                      onTap: () => setState(() {
+                        _error = '';
+                        _addEntries(prev.entries, data);
+                      }),
+                    ),
+                  ),
+                ),
               if (_rows.isEmpty)
                 DashedBox(
                   fill: c.surface,
