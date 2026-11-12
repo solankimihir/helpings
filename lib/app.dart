@@ -1,6 +1,7 @@
 import 'package:material_ui/material_ui.dart';
 
 import 'theme/app_theme.dart';
+import 'ui/shell.dart';
 
 class HelpingsApp extends StatelessWidget {
   const HelpingsApp({super.key, this.home});
@@ -16,7 +17,7 @@ class HelpingsApp extends StatelessWidget {
       theme: buildTheme(Brightness.light),
       darkTheme: buildTheme(Brightness.dark),
       themeMode: ThemeMode.system,
-      home: home ?? const Scaffold(body: Center(child: Text('Helpings'))),
+      home: home ?? const Shell(),
     );
   }
 }
