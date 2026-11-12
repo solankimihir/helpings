@@ -9,8 +9,12 @@ import 'item_sheet.dart';
 import 'shell.dart';
 import 'widgets/common.dart';
 
-/// Add a new meal, or edit [editing].
-Future<void> showMealSheet(BuildContext context, {Meal? editing}) {
+/// Add a new meal (on [date], default today), or edit [editing].
+Future<void> showMealSheet(
+  BuildContext context, {
+  Meal? editing,
+  String? date,
+}) {
   return showModalBottomSheet<void>(
     context: context,
     isScrollControlled: true,
@@ -23,7 +27,7 @@ Future<void> showMealSheet(BuildContext context, {Meal? editing}) {
     ),
     builder: (_) => FractionallySizedBox(
       heightFactor: .92,
-      child: MealSheet(editing: editing),
+      child: MealSheet(editing: editing, date: date),
     ),
   );
 }
@@ -53,8 +57,11 @@ class _DraftRow {
 }
 
 class MealSheet extends ConsumerStatefulWidget {
-  const MealSheet({super.key, this.editing});
+  const MealSheet({super.key, this.editing, this.date});
   final Meal? editing;
+
+  /// [dayKey] for a new meal; today when null. Ignored when editing.
+  final String? date;
 
   @override
   ConsumerState<MealSheet> createState() => _MealSheetState();
@@ -77,7 +84,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
     final data = ref.read(appDataProvider).requireValue;
     if (m == null) {
       _type = MealType.forHour(DateTime.now().hour);
-      _date = todayKey();
+      _date = widget.date ?? todayKey();
       _time = nowTime();
       _notes = TextEditingController();
     } else {

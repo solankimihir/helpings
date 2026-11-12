@@ -702,10 +702,18 @@ class UnitPicker extends StatelessWidget {
   }
 }
 
-Future<String?> pickDate(BuildContext context, String current) async {
+/// Earliest date any picker offers.
+final firstPickableDate = DateTime(2000);
+
+/// [last] defaults to a year from now.
+Future<String?> pickDate(
+  BuildContext context,
+  String current, {
+  DateTime? last,
+}) async {
   final initial = parseKey(current);
-  final first = DateTime(2000);
-  final last = DateTime.now().add(const Duration(days: 365));
+  final first = firstPickableDate;
+  last ??= DateTime.now().add(const Duration(days: 365));
   if (isCupertino(context)) {
     var picked = initial;
     final ok = await showCupertinoModalPopup<bool>(

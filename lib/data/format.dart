@@ -13,6 +13,18 @@ String shiftKey(int days, [DateTime? now]) {
   return dayKey(DateTime(n.year, n.month, n.day + days));
 }
 
+/// Whole calendar days from [key] back to today: 0 today, 1 yesterday,
+/// negative for future days. Uses UTC so DST changes don't skew it.
+int daysAgo(String key, [DateTime? now]) {
+  final n = now ?? DateTime.now();
+  final d = parseKey(key);
+  return DateTime.utc(
+    n.year,
+    n.month,
+    n.day,
+  ).difference(DateTime.utc(d.year, d.month, d.day)).inDays;
+}
+
 DateTime parseKey(String key) {
   final p = key.split('-').map(int.parse).toList();
   return DateTime(p[0], p[1], p[2]);

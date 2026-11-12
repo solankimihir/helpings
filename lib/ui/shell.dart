@@ -85,7 +85,12 @@ class Shell extends ConsumerWidget {
                 if (showQuickAdd && data.hasValue)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                    child: _AddMealButton(onTap: () => showMealSheet(context)),
+                    child: _AddMealButton(
+                      onTap: () => showMealSheet(
+                        context,
+                        date: tab == AppTab.home ? homeDayKey(ref) : null,
+                      ),
+                    ),
                   ),
                 _TabBar(
                   current: tab,
