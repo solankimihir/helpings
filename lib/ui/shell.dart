@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import 'history_screen.dart';
 import 'home_screen.dart';
 import 'items_screen.dart';
+import 'settings_screen.dart';
 import 'meal_sheet.dart';
 import 'widgets/common.dart';
 import 'widgets/tab_icons.dart';
@@ -51,7 +52,7 @@ class Shell extends ConsumerWidget {
           HomeScreen(),
           HistoryScreen(),
           ItemsScreen(),
-          _Placeholder('Settings'),
+          SettingsScreen(),
         ],
       ),
       AsyncError(:final error) => Center(
@@ -211,17 +212,4 @@ class _TabBar extends StatelessWidget {
       ),
     );
   }
-}
-
-class _Placeholder extends StatelessWidget {
-  const _Placeholder(this.title);
-  final String title;
-
-  @override
-  Widget build(BuildContext context) => SafeArea(
-    child: Padding(
-      padding: const EdgeInsets.fromLTRB(22, 16, 22, 0),
-      child: Text(title, style: serif(32, color: context.c.ink)),
-    ),
-  );
 }
