@@ -1,0 +1,1 @@
+First release: log meals, track today’s calories, browse history and manage your food list.

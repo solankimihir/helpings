@@ -1,0 +1,3 @@
+# Service-account key lives outside the repo. Override with PLAY_JSON_KEY.
+json_key_file(ENV["PLAY_JSON_KEY"] || File.expand_path("~/.android-keys/play-service-account.json"))
+package_name("in.mihirsolanki.helpings")

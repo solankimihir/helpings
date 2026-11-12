@@ -1,0 +1,26 @@
+Helpings is a calm, simple meal log. Write down what you ate in about ten seconds, see today's calories at a glance, and look back on any day — without accounts, ads or guesswork.
+
+EXACT, NEVER ESTIMATED
+Calories come only from what you enter. If a line has no calorie value, Helpings tells you the total is incomplete instead of making up a number.
+
+FAST LOGGING
+• Pick breakfast, lunch, dinner, snack or other — the time of day is pre-selected
+• Search your own food list; quantity, unit and calories pre-fill from your defaults
+• Not on the list? Create a new food right from the search
+• Add a note to any meal
+
+YOUR FOOD LIST
+• Starts with everyday foods like roti, dal, rice, idli, poha and tea
+• Set default calories and units (piece, gram, spoon, cup)
+• Hide foods you no longer eat, or delete them — past meals keep their names
+• Changing a default never rewrites meals you already saved
+
+HISTORY
+• Meals grouped by day with daily totals
+• Filter by meal type
+• Swipe to delete, tap to view or edit
+
+PRIVATE BY DESIGN
+Everything stays on your phone. Helpings has no account, no ads, no analytics and no internet access at all.
+
+Light and dark mode follow your system setting.

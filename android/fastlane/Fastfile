@@ -1,0 +1,53 @@
+# Release lanes for Helpings on Google Play.
+#
+#   cd android && fastlane closed      # build signed AAB, upload to Closed testing
+#   cd android && fastlane production  # promote/upload to Production (after
+#                                      # Play grants production access)
+#   cd android && fastlane listing     # push store text + images only
+#
+# Before each release, bump `version:` in pubspec.yaml (the +N build number
+# must increase) and add metadata/android/en-US/changelogs/<N>.txt.
+
+default_platform(:android)
+
+AAB = File.expand_path("../../build/app/outputs/bundle/release/app-release.aab", __dir__)
+
+platform :android do
+  private_lane :build_aab do
+    UI.user_error!("android/key.properties is missing — release builds must be signed with the upload key") unless File.exist?(File.expand_path("../key.properties", __dir__))
+    sh("cd ../.. && flutter build appbundle --release")
+  end
+
+  desc "Build and upload to the Closed testing track (alpha)"
+  lane :closed do
+    build_aab
+    upload_to_play_store(
+      track: "alpha",
+      aab: AAB,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+
+  desc "Build and upload to Production"
+  lane :production do
+    build_aab
+    upload_to_play_store(
+      track: "production",
+      aab: AAB,
+      skip_upload_metadata: true,
+      skip_upload_images: true,
+      skip_upload_screenshots: true,
+    )
+  end
+
+  desc "Upload store listing text, icon, feature graphic and screenshots"
+  lane :listing do
+    upload_to_play_store(
+      skip_upload_apk: true,
+      skip_upload_aab: true,
+      skip_upload_changelogs: true,
+    )
+  end
+end
