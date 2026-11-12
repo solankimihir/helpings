@@ -1,3 +1,6 @@
+import 'dart:io';
+import 'dart:typed_data';
+
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -6,9 +9,10 @@ import 'seed.dart';
 /// Owns the SQLite schema. Bump [version] and extend [_migrate] when the
 /// schema changes; never edit an already-shipped step.
 class AppDatabase {
-  AppDatabase._(this.db);
+  AppDatabase._(this.db, this._factory);
 
   final Database db;
+  final DatabaseFactory _factory;
 
   static const version = 1;
   static const fileName = 'helpings.db';
@@ -32,7 +36,131 @@ class AppDatabase {
         onUpgrade: _migrate,
       ),
     );
-    return AppDatabase._(db);
+    return AppDatabase._(db, f);
+  }
+
+  /// A self-contained copy of the database file, suitable for a backup.
+  ///
+  /// Some devices open SQLite in WAL mode, where recent writes live only in
+  /// the `-wal` sidecar. Checkpointing folds them into the main file first
+  /// (a no-op in rollback-journal mode).
+  /// Throws [StateError] for an in-memory database.
+  Future<Uint8List> snapshot() async {
+    final path = db.path;
+    if (path == inMemoryDatabasePath) {
+      throw StateError('Cannot snapshot an in-memory database');
+    }
+    await db.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
+    final bytes = await File(path).readAsBytes();
+    if (!isSqliteFile(bytes)) {
+      throw StateError('Database file is not a valid SQLite file');
+    }
+    return bytes;
+  }
+
+  /// Whether [bytes] begin with the SQLite 3 file header.
+  static bool isSqliteFile(List<int> bytes) {
+    const header = 'SQLite format 3\u0000';
+    if (bytes.length < 100) return false;
+    for (var i = 0; i < header.length; i++) {
+      if (bytes[i] != header.codeUnitAt(i)) return false;
+    }
+    return true;
+  }
+
+  /// User tables, parents before children.
+  static const _tables = ['food_items', 'meals', 'meal_entries', 'settings'];
+
+  /// Replaces every row with the contents of the backup [bytes], in a single
+  /// transaction: on any failure the current data is left untouched.
+  ///
+  /// Backups from older schema versions are migrated first. Settings whose
+  /// keys are in [keepSettings] (device-specific ones) keep their current
+  /// values. Throws [BackupFormatException] if [bytes] isn't a Helpings
+  /// backup this version can read.
+  Future<void> restore(
+    Uint8List bytes, {
+    Set<String> keepSettings = const {},
+  }) async {
+    if (!isSqliteFile(bytes)) {
+      throw const BackupFormatException("This file isn't a Helpings backup.");
+    }
+    final dir = db.path == inMemoryDatabasePath
+        ? Directory.systemTemp.path
+        : p.dirname(db.path);
+    final tmp = p.join(dir, 'restore-incoming.db');
+    await _factory.deleteDatabase(tmp);
+    await File(tmp).writeAsBytes(bytes, flush: true);
+    try {
+      await _checkBackup(tmp);
+      // Bring older backups up to the current schema.
+      await (await AppDatabase.open(factory: _factory, path: tmp)).close();
+
+      await db.execute('ATTACH DATABASE ? AS incoming', [tmp]);
+      try {
+        await db.transaction((txn) async {
+          // Checked at commit, so rows can be copied in any order.
+          await txn.execute('PRAGMA defer_foreign_keys = ON');
+          final keep = keepSettings.toList();
+          final notKept = keep.isEmpty
+              ? ''
+              : ' WHERE key NOT IN (${List.filled(keep.length, '?').join(',')})';
+          for (final t in _tables.reversed) {
+            await txn.execute(
+              'DELETE FROM main.$t${t == 'settings' ? notKept : ''}',
+              t == 'settings' ? keep : null,
+            );
+          }
+          for (final t in _tables) {
+            final cols = (await txn.rawQuery('PRAGMA main.table_info($t)'))
+                .map((r) => '"${r['name']}"')
+                .join(', ');
+            await txn.execute(
+              'INSERT INTO main.$t ($cols) SELECT $cols FROM incoming.$t'
+              '${t == 'settings' ? notKept : ''}',
+              t == 'settings' ? keep : null,
+            );
+          }
+        });
+      } finally {
+        await db.execute('DETACH DATABASE incoming');
+      }
+    } finally {
+      await _factory.deleteDatabase(tmp);
+    }
+  }
+
+  Future<void> _checkBackup(String path) async {
+    final Database bk;
+    try {
+      bk = await _factory.openDatabase(
+        path,
+        options: OpenDatabaseOptions(readOnly: true),
+      );
+    } catch (_) {
+      throw const BackupFormatException("This file couldn't be opened.");
+    }
+    try {
+      final v = (await bk.rawQuery('PRAGMA user_version')).first.values.first;
+      final names = (await bk.rawQuery(
+        "SELECT name FROM sqlite_master WHERE type = 'table'",
+      )).map((r) => r['name']).toSet();
+      if (v is! int || v < 1 || !_tables.every(names.contains)) {
+        throw const BackupFormatException("This file isn't a Helpings backup.");
+      }
+      if (v > version) {
+        throw const BackupFormatException(
+          'This backup is from a newer version of Helpings. '
+          'Update the app, then try again.',
+        );
+      }
+      final ok = (await bk.rawQuery('PRAGMA quick_check')).first.values.first;
+      if (ok != 'ok') {
+        throw const BackupFormatException('This backup file is damaged.');
+      }
+    } finally {
+      await bk.close();
+    }
   }
 
   static Future<void> _migrate(Database db, int from, int to) async {
@@ -81,4 +209,12 @@ class AppDatabase {
   }
 
   Future<void> close() => db.close();
+}
+
+/// A file offered for restore that can't be used. [message] is user-facing.
+class BackupFormatException implements Exception {
+  const BackupFormatException(this.message);
+  final String message;
+  @override
+  String toString() => message;
 }

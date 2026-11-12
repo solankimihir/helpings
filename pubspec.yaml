@@ -41,6 +41,7 @@ dependencies:
   intl: ^0.20.3
   uuid: ^4.6.0
   cupertino_ui: ^1.1.6
+  file_picker: ^13.3.3
 
 dev_dependencies:
   flutter_test:

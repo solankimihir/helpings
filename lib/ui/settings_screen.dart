@@ -1,11 +1,25 @@
+import 'dart:typed_data';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../data/backup.dart';
+import '../data/database.dart';
 import '../data/format.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'shell.dart';
 import 'widgets/common.dart';
+
+final _backupDate = DateFormat('MMM d, y · h:mm a', 'en_US');
+
+/// "last backup today" / "last backup November 10".
+String _lastAutoLabel(String? day) {
+  if (day == null) return 'no backup yet';
+  final l = dayGroupLabel(day);
+  return 'last backup ${day == todayKey() || l == 'Yesterday' ? l.toLowerCase() : l}';
+}
 
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
@@ -15,10 +29,12 @@ class SettingsScreen extends ConsumerWidget {
     final data = ref.watch(appDataProvider).requireValue;
     final notifier = ref.read(appDataProvider.notifier);
     final c = context.c;
+    final auto = data.autoBackup;
 
     Widget row({
       required String title,
       required String subtitle,
+      Color? subtitleColor,
       required Widget trailing,
       bool divider = true,
     }) => Container(
@@ -36,7 +52,10 @@ class SettingsScreen extends ConsumerWidget {
                   title,
                   style: sans(15, weight: FontWeight.w500, color: c.ink),
                 ),
-                Text(subtitle, style: sans(12.5, color: c.inkA(.45))),
+                Text(
+                  subtitle,
+                  style: sans(12.5, color: subtitleColor ?? c.inkA(.45)),
+                ),
               ],
             ),
           ),
@@ -89,6 +108,41 @@ class SettingsScreen extends ConsumerWidget {
               children: [
                 AppCard(
                   radius: 20,
+                  padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Appearance',
+                        style: sans(15, weight: FontWeight.w500, color: c.ink),
+                      ),
+                      Text(
+                        'System follows your device setting',
+                        style: sans(12.5, color: c.inkA(.45)),
+                      ),
+                      const SizedBox(height: 12),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          for (final (mode, label) in const [
+                            (ThemeMode.system, 'System'),
+                            (ThemeMode.light, 'Light'),
+                            (ThemeMode.dark, 'Dark'),
+                          ])
+                            AppChip(
+                              label: label,
+                              selected: data.themeMode == mode,
+                              onTap: () => notifier.setThemeMode(mode),
+                            ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                AppCard(
+                  radius: 20,
                   padding: const EdgeInsets.symmetric(
                     horizontal: 16,
                     vertical: 4,
@@ -133,6 +187,85 @@ class SettingsScreen extends ConsumerWidget {
                             color: c.link,
                           ),
                         ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: 16),
+                AppCard(
+                  radius: 20,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: Column(
+                    children: [
+                      row(
+                        title: 'Backup',
+                        subtitle: data.lastBackupAt == null
+                            ? 'Save a copy of your data to a file'
+                            : 'Last saved '
+                                  '${_backupDate.format(data.lastBackupAt!)}',
+                        trailing: Pill(
+                          label: 'Save copy',
+                          onTap: () async {
+                            try {
+                              final saved = await notifier.backup();
+                              if (saved && context.mounted) {
+                                toast(context, 'Backup saved.');
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                toast(context, "Couldn't save the backup.");
+                              }
+                            }
+                          },
+                        ),
+                      ),
+                      row(
+                        title: 'Daily backup',
+                        subtitle: switch (auto) {
+                          null =>
+                            'Saves to a folder you choose on the first open '
+                                'each day. Keeps the last $autoBackupKeep.',
+                          AutoBackupStatus(:final error?) => error,
+                          AutoBackupStatus(:final folderName, :final lastDay) =>
+                            '“$folderName” · ${_lastAutoLabel(lastDay)}',
+                        },
+                        subtitleColor: auto?.error != null ? c.danger : null,
+                        trailing: Pill(
+                          label: auto == null ? 'Choose folder' : 'Change',
+                          onTap: () async {
+                            final chose = await notifier
+                                .chooseAutoBackupFolder();
+                            if (!chose || !context.mounted) return;
+                            final s = ref
+                                .read(appDataProvider)
+                                .value
+                                ?.autoBackup;
+                            toast(
+                              context,
+                              s?.error ??
+                                  'Daily backup is on. Today’s is saved.',
+                            );
+                          },
+                        ),
+                      ),
+                      if (auto != null)
+                        action('Turn off daily backup', c.inkA(.7), () async {
+                          await notifier.disableAutoBackup();
+                          if (context.mounted) {
+                            toast(
+                              context,
+                              'Daily backup is off. Saved files are kept.',
+                            );
+                          }
+                        }),
+                      action(
+                        'Restore from a backup…',
+                        c.link,
+                        () => _restore(context, ref),
+                        divider: auto != null,
                       ),
                     ],
                   ),
@@ -193,5 +326,49 @@ class SettingsScreen extends ConsumerWidget {
         ],
       ),
     );
+  }
+
+  Future<void> _restore(BuildContext context, WidgetRef ref) async {
+    final Uint8List? bytes;
+    try {
+      bytes = await ref.read(backupPickerProvider)();
+    } catch (_) {
+      if (context.mounted) toast(context, "Couldn't open that file.");
+      return;
+    }
+    if (bytes == null || !context.mounted) return;
+    if (!AppDatabase.isSqliteFile(bytes)) {
+      toast(context, "This file isn't a Helpings backup.");
+      return;
+    }
+    final data = ref.read(appDataProvider).requireValue;
+    final folder = data.autoBackup?.folderName;
+    final ok = await confirm(
+      context,
+      title: 'Restore this backup?',
+      message:
+          'Your ${plural(data.meals.length, 'meal')} and '
+          '${plural(data.items.length, 'food item')} on this device will be '
+          'replaced by the backup. '
+          '${folder != null ? 'A copy of your current data will be saved to “$folder” first.' : 'This can’t be undone, so save a copy first if you might want it back.'}',
+      action: 'Restore',
+    );
+    if (!ok) return;
+    try {
+      await ref.read(appDataProvider.notifier).restore(bytes);
+      final now = ref.read(appDataProvider).requireValue;
+      if (context.mounted) {
+        toast(
+          context,
+          'Restored ${plural(now.meals.length, 'meal')} and '
+          '${plural(now.items.length, 'food item')}.',
+        );
+      }
+    } on BackupFormatException catch (e) {
+      if (context.mounted) toast(context, e.message);
+    } catch (e) {
+      debugPrint('Restore failed: $e');
+      if (context.mounted) toast(context, "Couldn't restore this backup.");
+    }
   }
 }

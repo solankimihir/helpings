@@ -11,6 +11,9 @@ void main() {
   testWidgets('settings: default unit, restore items, delete all meals', (
     tester,
   ) async {
+    // Tall enough to show every Settings card at once.
+    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
     late Repository repo;
     await pumpApp(
       tester,
@@ -58,5 +61,35 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Delete all'));
     await tester.pumpAndSettle();
     expect(find.textContaining('0 meals stored on device'), findsOneWidget);
+  });
+
+  testWidgets('settings: appearance overrides and persists', (tester) async {
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.light;
+    addTearDown(tester.platformDispatcher.clearPlatformBrightnessTestValue);
+    final db = await pumpApp(tester);
+    final repo = Repository(db);
+    await tester.tap(find.text('Settings'));
+    await tester.pumpAndSettle();
+
+    Brightness brightness() =>
+        Theme.of(tester.element(find.text('Appearance'))).brightness;
+    expect(brightness(), Brightness.light);
+
+    await tester.tap(find.text('Dark'));
+    await tester.pumpAndSettle();
+    expect(brightness(), Brightness.dark);
+    expect(await tester.runAsync(() => repo.setting('theme_mode')), 'dark');
+
+    // System follows the device again.
+    await tester.tap(find.text('System'));
+    await tester.pumpAndSettle();
+    expect(brightness(), Brightness.light);
+    tester.platformDispatcher.platformBrightnessTestValue = Brightness.dark;
+    await tester.pumpAndSettle();
+    expect(brightness(), Brightness.dark);
+
+    await tester.tap(find.text('Light'));
+    await tester.pumpAndSettle();
+    expect(brightness(), Brightness.light);
   });
 }

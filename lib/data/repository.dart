@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:sqflite/sqflite.dart';
 
 import 'database.dart';
@@ -126,6 +128,18 @@ class Repository {
   Future<void> deleteAllMeals() => _db.delete('meals');
 
   // ---- Settings -----------------------------------------------------------
+
+  Future<Uint8List> snapshot() => _appDb.snapshot();
+
+  Future<void> restore(
+    Uint8List bytes, {
+    Set<String> keepSettings = const {},
+  }) => _appDb.restore(bytes, keepSettings: keepSettings);
+
+  Future<Map<String, String?>> settings() async => {
+    for (final r in await _db.query('settings'))
+      r['key']! as String: r['value'] as String?,
+  };
 
   Future<String?> setting(String key) async {
     final r = await _db.query(
