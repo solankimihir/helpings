@@ -682,41 +682,78 @@ class UnitPicker extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    if (isCupertino(context)) {
-      return PickerField(
+    final values = _values;
+    // A Builder so the menu can be placed against this field's own box.
+    return Builder(
+      builder: (context) => PickerField(
         text: _label(value),
         radius: radius,
         padding: padding,
         fontSize: fontSize,
         semanticLabel: 'Unit',
         onTap: () async {
-          final values = _values;
-          final i = await _cupertinoWheel<FoodUnit?>(
-            context,
-            values: values,
-            initial: value,
-            label: _label,
-          );
+          // Close the keyboard first and let the sheet settle; a menu opened
+          // before that would stay where the field used to be.
+          await closeKeyboard(context);
+          if (!context.mounted) return;
+          final i = isCupertino(context)
+              ? await _cupertinoWheel<FoodUnit?>(
+                  context,
+                  values: values,
+                  initial: value,
+                  label: _label,
+                )
+              : await _unitMenu(context, values);
           if (i != null && values[i] != value) onChanged(values[i]);
         },
-      );
-    }
-    final c = context.c;
-    return DropdownButtonFormField<FoodUnit?>(
-      initialValue: value,
-      isExpanded: true,
-      isDense: true,
-      icon: Icon(Icons.unfold_more_rounded, size: 16, color: c.inkA(.35)),
-      dropdownColor: c.surface,
-      borderRadius: BorderRadius.circular(14),
-      style: sans(fontSize, color: c.ink),
-      decoration: fieldDecoration(context, radius: radius, padding: padding),
-      items: [
-        for (final u in _values)
-          DropdownMenuItem(value: u, child: Text(_label(u))),
-      ],
-      onChanged: onChanged,
+      ),
     );
+  }
+
+  /// Index of the chosen unit, or null when dismissed.
+  Future<int?> _unitMenu(BuildContext context, List<FoodUnit?> values) {
+    final c = context.c;
+    final box = context.findRenderObject()! as RenderBox;
+    final overlay =
+        Navigator.of(context).overlay!.context.findRenderObject()! as RenderBox;
+    final rect = box.localToGlobal(Offset.zero, ancestor: overlay) & box.size;
+    final current = values.indexOf(value);
+    return showMenu<int>(
+      context: context,
+      position: RelativeRect.fromRect(rect, Offset.zero & overlay.size),
+      initialValue: current < 0 ? null : current,
+      color: c.surface,
+      constraints: BoxConstraints(minWidth: box.size.width),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+      items: [
+        for (var i = 0; i < values.length; i++)
+          PopupMenuItem(
+            value: i,
+            child: Text(
+              _label(values[i]),
+              style: sans(
+                fontSize,
+                color: c.ink,
+                weight: i == current ? FontWeight.w600 : FontWeight.w400,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+/// Dismisses the keyboard, if open, and waits until it has finished closing
+/// so whatever sits above it (a bottom sheet) is back in its final place.
+Future<void> closeKeyboard(BuildContext context) async {
+  final view = View.of(context);
+  FocusManager.instance.primaryFocus?.unfocus();
+  if (view.viewInsets.bottom == 0) return;
+  // Settled once the inset is zero for two frames in a row (about 1s max).
+  var zeroFrames = 0;
+  for (var i = 0; i < 60 && zeroFrames < 2; i++) {
+    await Future<void>.delayed(const Duration(milliseconds: 16));
+    zeroFrames = view.viewInsets.bottom == 0 ? zeroFrames + 1 : 0;
   }
 }
 

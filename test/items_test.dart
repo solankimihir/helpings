@@ -173,4 +173,32 @@ void main() {
       expect(await logged(tester, db), isNull);
     });
   });
+
+  testWidgets('the unit menu waits for the keyboard to close', (tester) async {
+    await pumpApp(tester);
+    await tester.tap(find.text('Meal Items').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('+ New'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(TextField, 'optional'));
+    tester.view.viewInsets = const FakeViewPadding(bottom: 800);
+    addTearDown(tester.view.resetViewInsets);
+    await tester.pump();
+
+    await tester.tap(find.text('Piece').last);
+    await tester.pump(const Duration(milliseconds: 100));
+    // Still waiting: the keyboard hasn't gone yet.
+    expect(find.text('Gram'), findsNothing);
+
+    tester.view.resetViewInsets();
+    await tester.pumpAndSettle();
+    final field = tester.getRect(find.text('Piece').first);
+    final gram = tester.getRect(find.text('Gram'));
+    // Opened next to the field in its settled place.
+    expect((gram.top - field.top).abs(), lessThan(300));
+    await tester.tap(find.text('Gram'));
+    await tester.pumpAndSettle();
+    expect(find.text('Gram'), findsOneWidget);
+    expect(find.text('Spoon'), findsNothing);
+  });
 }
