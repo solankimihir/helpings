@@ -145,7 +145,7 @@ void main() {
         find.text('Replace 1 logged line that has different calories'),
         findsOneWidget,
       );
-      expect(find.text('Now 10 kcal'), findsOneWidget);
+      expect(find.text('Currently 10 kcal'), findsOneWidget);
 
       // By default only the blank line is filled.
       await tester.tap(find.text('Update'));

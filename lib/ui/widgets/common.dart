@@ -845,7 +845,7 @@ Future<({bool fill, bool stale, bool other})?> askUpdatePastLines(
   final shown = otherValues.take(3).map(fmtN).join(', ');
   final otherNote = otherValues.isEmpty
       ? null
-      : 'Now $shown${otherValues.length > 3 ? '…' : ''} kcal';
+      : 'Currently $shown${otherValues.length > 3 ? '…' : ''} kcal';
   return showAdaptiveDialog<({bool fill, bool stale, bool other})>(
     context: context,
     builder: (ctx) => StatefulBuilder(
