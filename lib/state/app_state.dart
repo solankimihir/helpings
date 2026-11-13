@@ -273,6 +273,27 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
     return n;
   }
 
+  /// Lines of [itemId] in [unit], logged and in combos.
+  Future<UnitLines> unitLines(String itemId, FoodUnit? unit) async =>
+      (await _repo).unitLines(itemId, unit);
+
+  /// Moves [lines] to [unit]. Returns how many changed.
+  Future<int> setLineUnits(
+    String itemId,
+    UnitLines lines,
+    FoodUnit unit,
+  ) async {
+    var n = 0;
+    await _mutate((r) async => n = await r.setLineUnits(itemId, lines, unit));
+    return n;
+  }
+
+  Future<LinesSnapshot> snapshotLines(String itemId) async =>
+      (await _repo).snapshotLines(itemId);
+
+  Future<void> restoreLines(LinesSnapshot snap) =>
+      _mutate((r) => r.restoreLines(snap));
+
   Future<void> setItemActive(String id, bool active) =>
       _mutate((r) => r.setItemActive(id, active));
 

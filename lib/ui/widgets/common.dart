@@ -828,6 +828,7 @@ Future<bool> confirm(
   required String title,
   required String message,
   required String action,
+  String cancel = 'Cancel',
   bool destructive = true,
 }) async {
   final r = await showAdaptiveDialog<bool>(
@@ -857,7 +858,7 @@ Future<bool> confirm(
         title: Text(title),
         content: Text(message),
         actions: [
-          btn('Cancel', false, isDefault: true),
+          btn(cancel, false, isDefault: true),
           btn(action, true, danger: destructive),
         ],
       );
@@ -998,6 +999,56 @@ Future<({bool fill, bool stale, bool other})?> askUpdatePastLines(
         );
       },
     ),
+  );
+}
+
+/// How long an Undo stays on screen.
+const undoWindow = Duration(seconds: 30);
+
+/// A snackbar with an Undo button that goes away after [undoWindow].
+void toastWithUndo(
+  BuildContext context,
+  String message, {
+  required VoidCallback onUndo,
+}) {
+  ScaffoldMessenger.of(context)
+    ..hideCurrentSnackBar()
+    ..showSnackBar(
+      SnackBar(
+        content: Text(message),
+        duration: undoWindow,
+        persist: false,
+        action: SnackBarAction(label: 'Undo', onPressed: onUndo),
+      ),
+    );
+}
+
+/// Asks whether past lines of [food] in [from] should move to [to].
+Future<bool> askChangePastUnits(
+  BuildContext context, {
+  required String food,
+  required FoodUnit? from,
+  required FoodUnit to,
+  required int logged,
+  required int combo,
+}) async {
+  final fromName = from?.name ?? 'no unit';
+  final parts = [
+    if (logged > 0) plural(logged, 'logged line'),
+    if (combo > 0) plural(combo, 'combo line'),
+  ].join(' and ');
+  final n = logged + combo;
+  return confirm(
+    context,
+    title: 'Change unit on past meals?',
+    message:
+        '$parts of “$food” ${n == 1 ? 'uses' : 'use'} '
+        '${from == null ? 'no unit' : '“$fromName”'}. '
+        'Change ${n == 1 ? 'it' : 'them'} to “${to.name}”? '
+        'Quantities and calories stay as they are.',
+    action: 'Change to ${to.name}',
+    cancel: from == null ? 'Leave as is' : 'Keep $fromName',
+    destructive: false,
   );
 }
 

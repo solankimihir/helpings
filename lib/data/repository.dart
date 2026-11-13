@@ -48,6 +48,25 @@ class PastLines {
   bool get isEmpty => fillable.isEmpty && stale.isEmpty && other.isEmpty;
 }
 
+/// Lines of one food in a given unit: logged meal lines and combo lines.
+class UnitLines {
+  const UnitLines({this.logged = const [], this.combo = const []});
+  final List<String> logged;
+  final List<String> combo;
+  bool get isEmpty => logged.isEmpty && combo.isEmpty;
+}
+
+/// Units and calories of a food's lines as they were, to undo a change.
+class LinesSnapshot {
+  const LinesSnapshot({this.logged = const {}, this.combo = const {}});
+
+  /// Meal line id → (unit id, calories).
+  final Map<String, (String?, double?)> logged;
+
+  /// Combo line id → unit id.
+  final Map<String, String?> combo;
+}
+
 class Repository {
   Repository(this._appDb);
 
@@ -192,6 +211,95 @@ class Repository {
         }
         return n;
       });
+
+  /// Lines of [itemId] whose unit is [unit] (null: lines with no unit).
+  Future<UnitLines> unitLines(String itemId, FoodUnit? unit) async {
+    final where = unit == null
+        ? 'item_id = ? AND unit IS NULL'
+        : 'item_id = ? AND unit = ?';
+    final args = [itemId, if (unit != null) unit.id];
+    Future<List<String>> ids(String table) async => [
+      for (final r in await _db.query(
+        table,
+        columns: ['id'],
+        where: where,
+        whereArgs: args,
+      ))
+        r['id'] as String,
+    ];
+    return UnitLines(
+      logged: await ids('meal_entries'),
+      combo: await ids('combo_items'),
+    );
+  }
+
+  /// Sets the unit of [lines] (all of [itemId]) to [unit]. Quantities and
+  /// calories stay. Returns how many changed.
+  Future<int> setLineUnits(String itemId, UnitLines lines, FoodUnit unit) =>
+      _db.transaction((txn) async {
+        var n = 0;
+        for (final (table, ids) in [
+          ('meal_entries', lines.logged),
+          ('combo_items', lines.combo),
+        ]) {
+          for (final id in ids) {
+            n += await txn.update(
+              table,
+              {'unit': unit.id},
+              where: 'id = ? AND item_id = ?',
+              whereArgs: [id, itemId],
+            );
+          }
+        }
+        return n;
+      });
+
+  /// Every line of [itemId] as it is now.
+  Future<LinesSnapshot> snapshotLines(String itemId) async {
+    final logged = await _db.query(
+      'meal_entries',
+      columns: ['id', 'unit', 'calories'],
+      where: 'item_id = ?',
+      whereArgs: [itemId],
+    );
+    final combo = await _db.query(
+      'combo_items',
+      columns: ['id', 'unit'],
+      where: 'item_id = ?',
+      whereArgs: [itemId],
+    );
+    return LinesSnapshot(
+      logged: {
+        for (final r in logged)
+          r['id'] as String: (
+            r['unit'] as String?,
+            (r['calories'] as num?)?.toDouble(),
+          ),
+      },
+      combo: {for (final r in combo) r['id'] as String: r['unit'] as String?},
+    );
+  }
+
+  /// Puts back the units and calories in [snap]. Lines deleted since are
+  /// skipped.
+  Future<void> restoreLines(LinesSnapshot snap) => _db.transaction((txn) async {
+    for (final MapEntry(key: id, value: (unit, cal)) in snap.logged.entries) {
+      await txn.update(
+        'meal_entries',
+        {'unit': unit, 'calories': cal},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
+    for (final MapEntry(key: id, value: unit) in snap.combo.entries) {
+      await txn.update(
+        'combo_items',
+        {'unit': unit},
+        where: 'id = ?',
+        whereArgs: [id],
+      );
+    }
+  });
 
   // ---- Units --------------------------------------------------------------
 

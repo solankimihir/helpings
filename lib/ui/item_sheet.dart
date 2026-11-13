@@ -93,9 +93,7 @@ class _ItemSheetState extends ConsumerState<ItemSheet> {
     final notifier = ref.read(appDataProvider.notifier);
     try {
       final saved = await notifier.saveItem(item);
-      if (base != null && cal != null && mounted) {
-        await _offerPastUpdate(base, saved);
-      }
+      if (base != null && mounted) await _offerPastUpdate(base, saved);
       if (mounted) Navigator.pop(context, saved);
     } on DuplicateNameException catch (e) {
       if (mounted) {
@@ -107,32 +105,74 @@ class _ItemSheetState extends ConsumerState<ItemSheet> {
     }
   }
 
-  /// Past meals keep their own calories; offer to fill in the blanks (and,
-  /// if asked, lines still at the old default) from the new default.
+  /// Past meals keep their own unit and calories. Offers to move lines in
+  /// the old unit to the new one, then to fill in calories from the new
+  /// default. Whatever changes can be undone for [undoWindow].
   Future<void> _offerPastUpdate(FoodItem before, FoodItem after) async {
     final notifier = ref.read(appDataProvider.notifier);
-    final past = await notifier.pastLines(before, after);
-    if (past.isEmpty || !mounted) return;
-    final choice = await askUpdatePastLines(
-      context,
-      food: after.name,
-      calories: after.defaultCalories!,
-      fillable: past.fillable.length,
-      stale: past.stale.length,
-      otherUnit: past.otherUnit,
-      other: past.other.length,
-      otherValues: past.otherValues,
-      oldCalories: past.oldCalories,
-    );
-    if (choice == null || !mounted) return;
-    final n = await notifier.applyPastLines(after, [
-      if (choice.fill) ...past.fillable,
-      if (choice.stale) ...past.stale,
-      if (choice.other) ...past.other,
-    ]);
-    if (mounted && n > 0) {
-      toast(context, 'Updated ${plural(n, 'logged line')}');
+    final snap = await notifier.snapshotLines(after.id);
+    var units = 0;
+    final to = after.defaultUnit;
+    if (to != null && before.defaultUnit != to) {
+      final lines = await notifier.unitLines(after.id, before.defaultUnit);
+      if (!lines.isEmpty && mounted) {
+        final change = await askChangePastUnits(
+          context,
+          food: after.name,
+          from: before.defaultUnit,
+          to: to,
+          logged: lines.logged.length,
+          combo: lines.combo.length,
+        );
+        if (change) units = await notifier.setLineUnits(after.id, lines, to);
+      }
     }
+    if (!mounted) return;
+    var cals = 0;
+    if (after.defaultCalories != null) {
+      final past = await notifier.pastLines(before, after);
+      if (!past.isEmpty && mounted) {
+        final choice = await askUpdatePastLines(
+          context,
+          food: after.name,
+          calories: after.defaultCalories!,
+          fillable: past.fillable.length,
+          stale: past.stale.length,
+          otherUnit: past.otherUnit,
+          other: past.other.length,
+          otherValues: past.otherValues,
+          oldCalories: past.oldCalories,
+        );
+        if (choice != null) {
+          cals = await notifier.applyPastLines(after, [
+            if (choice.fill) ...past.fillable,
+            if (choice.stale) ...past.stale,
+            if (choice.other) ...past.other,
+          ]);
+        }
+      }
+    }
+    if (!mounted || units + cals == 0) return;
+    final message = [
+      if (units > 0) 'Changed the unit on ${plural(units, 'line')}',
+      if (cals > 0) 'updated calories on ${plural(cals, 'line')}',
+    ].join(', ');
+    final messenger = ScaffoldMessenger.of(context);
+    toastWithUndo(
+      context,
+      message[0].toUpperCase() + message.substring(1),
+      onUndo: () async {
+        await notifier.restoreLines(snap);
+        messenger
+          ..hideCurrentSnackBar()
+          ..showSnackBar(
+            const SnackBar(
+              content: Text('Past meals put back'),
+              duration: Duration(seconds: 2),
+            ),
+          );
+      },
+    );
   }
 
   Future<void> _delete() async {
