@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../data/backup.dart';
+import '../data/csv_export.dart';
 import '../data/database.dart';
 import '../data/format.dart';
 import '../state/app_state.dart';
@@ -317,6 +318,12 @@ class SettingsScreen extends ConsumerWidget {
                         () => _restore(context, ref),
                         divider: auto != null,
                       ),
+                      action(
+                        'Export as spreadsheet (CSV)',
+                        c.link,
+                        () => _exportCsv(context, ref),
+                        divider: true,
+                      ),
                     ],
                   ),
                 ),
@@ -419,6 +426,26 @@ class SettingsScreen extends ConsumerWidget {
     } catch (e) {
       debugPrint('Restore failed: $e');
       if (context.mounted) toast(context, "Couldn't restore this backup.");
+    }
+  }
+
+  Future<void> _exportCsv(BuildContext context, WidgetRef ref) async {
+    final data = ref.read(appDataProvider).requireValue;
+    if (data.meals.isEmpty) {
+      toast(context, 'There are no meals to export yet.');
+      return;
+    }
+    try {
+      final saved = await ref.read(csvSaverProvider)(
+        csvFileName(DateTime.now()),
+        csvBytes(mealsToCsv(data)),
+      );
+      if (saved && context.mounted) {
+        toast(context, 'Exported ${plural(data.meals.length, 'meal')}.');
+      }
+    } catch (e) {
+      debugPrint('CSV export failed: $e');
+      if (context.mounted) toast(context, "Couldn't export your meals.");
     }
   }
 }
