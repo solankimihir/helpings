@@ -20,6 +20,8 @@ class PastLines {
   const PastLines({
     this.fillable = const [],
     this.stale = const [],
+    this.other = const [],
+    this.otherValues = const [],
     this.otherUnit = 0,
     this.oldCalories,
   });
@@ -30,13 +32,20 @@ class PastLines {
   /// Lines that still hold the old default (scaled by quantity).
   final List<String> stale;
 
+  /// Lines with calories that match neither the new nor the old default,
+  /// e.g. typed by hand.
+  final List<String> other;
+
+  /// The distinct calorie values of [other], ascending.
+  final List<double> otherValues;
+
   /// Lines with no calories in a unit other than the food's default.
   final int otherUnit;
 
   /// The food's previous default.
   final double? oldCalories;
 
-  bool get isEmpty => fillable.isEmpty && stale.isEmpty;
+  bool get isEmpty => fillable.isEmpty && stale.isEmpty && other.isEmpty;
 }
 
 class Repository {
@@ -103,6 +112,12 @@ class Repository {
   /// Logged lines of [after] that a change from [before]'s default calories
   /// could update.
   Future<PastLines> pastLines(FoodItem before, FoodItem after) async {
+    // Only a change to the calories or unit is worth asking about.
+    if (after.defaultCalories == null ||
+        (before.defaultCalories == after.defaultCalories &&
+            before.defaultUnit == after.defaultUnit)) {
+      return const PastLines();
+    }
     final rows = await _db.query(
       'meal_entries',
       columns: ['id', 'qty', 'unit', 'calories'],
@@ -111,33 +126,38 @@ class Repository {
     );
     final fillable = <String>[];
     final stale = <String>[];
+    final other = <String>[];
+    final otherValues = <double>{};
     var otherUnit = 0;
     final checkStale =
         before.defaultCalories != null &&
-        after.defaultCalories != null &&
-        before.defaultCalories != after.defaultCalories &&
         before.defaultUnit == after.defaultUnit;
+    bool same(double a, double b) => (a - b).abs() < 0.001;
     for (final r in rows) {
+      final id = r['id'] as String;
       final qty = (r['qty'] as num?)?.toDouble();
       final unit = FoodUnit.tryParse(r['unit'] as String?);
       final cal = (r['calories'] as num?)?.toDouble();
       final next = itemCalories(after, qty, unit);
-      if (cal == null) {
-        if (next != null) {
-          fillable.add(r['id'] as String);
-        } else if (after.defaultCalories != null) {
-          otherUnit++;
-        }
-      } else if (checkStale && next != null) {
-        final old = itemCalories(before, qty, unit);
-        if (old != null && (cal - old).abs() < 0.001) {
-          stale.add(r['id'] as String);
+      if (next == null) {
+        if (cal == null) otherUnit++;
+      } else if (cal == null) {
+        fillable.add(id);
+      } else if (!same(cal, next)) {
+        final old = checkStale ? itemCalories(before, qty, unit) : null;
+        if (old != null && same(cal, old)) {
+          stale.add(id);
+        } else {
+          other.add(id);
+          otherValues.add(cal);
         }
       }
     }
     return PastLines(
       fillable: fillable,
       stale: stale,
+      other: other,
+      otherValues: otherValues.toList()..sort(),
       otherUnit: otherUnit,
       oldCalories: before.defaultCalories,
     );

@@ -108,6 +108,9 @@ void main() {
         expect(past.fillable, unorderedEquals(['one', 'two', 'bare']));
         expect(past.otherUnit, 1);
         expect(past.stale, isEmpty);
+        // A typed value that differs is offered separately.
+        expect(past.other, ['typed']);
+        expect(past.otherValues, [120]);
 
         expect(await repo.applyPastLines(v150, past.fillable), 3);
         expect(await calories(), {
@@ -125,6 +128,7 @@ void main() {
         expect(next.fillable, isEmpty);
         expect(next.stale, unorderedEquals(['one', 'two', 'bare']));
         expect(next.oldCalories, 150);
+        expect(next.other, ['typed']);
         await repo.applyPastLines(v180, next.stale);
         expect(await calories(), {
           'one': 180,
@@ -133,6 +137,13 @@ void main() {
           'typed': 120,
           'bare': 180,
         });
+
+        // Saving without changing calories or unit (e.g. a rename) asks
+        // nothing.
+        expect(
+          (await repo.pastLines(v180, v180.copyWith(name: 'Toastie'))).isEmpty,
+          isTrue,
+        );
 
         // Clearing the default never clears past lines; a unit change never
         // offers to update old values.

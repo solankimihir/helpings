@@ -120,12 +120,15 @@ class _ItemSheetState extends ConsumerState<ItemSheet> {
       fillable: past.fillable.length,
       stale: past.stale.length,
       otherUnit: past.otherUnit,
+      other: past.other.length,
+      otherValues: past.otherValues,
       oldCalories: past.oldCalories,
     );
     if (choice == null || !mounted) return;
     final n = await notifier.applyPastLines(after, [
       if (choice.fill) ...past.fillable,
       if (choice.stale) ...past.stale,
+      if (choice.other) ...past.other,
     ]);
     if (mounted && n > 0) {
       toast(context, 'Updated ${plural(n, 'logged line')}');

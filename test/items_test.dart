@@ -72,7 +72,7 @@ void main() {
       name: 'Toast Sandwich',
       defaultUnit: FoodUnit.piece,
     );
-    Future<void> seed(Repository r) async {
+    Future<void> seed(Repository r, {double? typed}) async {
       await r.saveItem(toast);
       await r.saveMeal(
         Meal(
@@ -80,25 +80,35 @@ void main() {
           typeId: 'lunch',
           date: todayKey(),
           time: '13:00',
-          entries: const [
-            MealEntry(
+          entries: [
+            const MealEntry(
               id: 'e',
               itemId: 'toast',
               nameSnapshot: 'Toast Sandwich',
               qty: 2,
               unit: FoodUnit.piece,
             ),
+            if (typed != null)
+              MealEntry(
+                id: 'f',
+                itemId: 'toast',
+                nameSnapshot: 'Toast Sandwich',
+                qty: 1,
+                unit: FoodUnit.piece,
+                calories: typed,
+              ),
           ],
         ),
       );
     }
 
+    Future<List<double?>> loggedAll(WidgetTester tester, db) async =>
+        (await tester.runAsync(() => Repository(db).meals()))!.single.entries
+            .map((e) => e.calories)
+            .toList();
+
     Future<double?> logged(WidgetTester tester, db) async =>
-        (await tester.runAsync(() => Repository(db).meals()))!
-            .single
-            .entries
-            .single
-            .calories;
+        (await loggedAll(tester, db)).first;
 
     Future<void> setCalories(WidgetTester tester) async {
       await tester.tap(find.text('Meal Items').last);
@@ -124,6 +134,35 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.text('Update past meals?'), findsNothing);
       expect(await logged(tester, db), 300); // 2 pieces × 150
+    });
+
+    testWidgets('lines with other calories are offered, unticked', (
+      tester,
+    ) async {
+      final db = await pumpApp(tester, seed: (r) => seed(r, typed: 10));
+      await setCalories(tester);
+      expect(
+        find.text('Replace 1 logged line that has different calories'),
+        findsOneWidget,
+      );
+      expect(find.text('Now 10 kcal'), findsOneWidget);
+
+      // By default only the blank line is filled.
+      await tester.tap(find.text('Update'));
+      await tester.pumpAndSettle();
+      expect(await loggedAll(tester, db), [300, 10]);
+    });
+
+    testWidgets('ticking it replaces the typed value too', (tester) async {
+      final db = await pumpApp(tester, seed: (r) => seed(r, typed: 10));
+      await setCalories(tester);
+      await tester.tap(
+        find.text('Replace 1 logged line that has different calories'),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Update'));
+      await tester.pumpAndSettle();
+      expect(await loggedAll(tester, db), [300, 150]);
     });
 
     testWidgets('leave as is keeps them blank', (tester) async {

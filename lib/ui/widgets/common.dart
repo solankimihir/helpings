@@ -828,18 +828,25 @@ Future<bool> confirm(
 
 /// Which past lines to update after a food's default calories changed.
 /// Null if the user leaves them as they are.
-Future<({bool fill, bool stale})?> askUpdatePastLines(
+Future<({bool fill, bool stale, bool other})?> askUpdatePastLines(
   BuildContext context, {
   required String food,
   required double calories,
   required int fillable,
   required int stale,
   required int otherUnit,
+  int other = 0,
+  List<double> otherValues = const [],
   double? oldCalories,
 }) {
   var fill = fillable > 0;
   var fixStale = false;
-  return showAdaptiveDialog<({bool fill, bool stale})>(
+  var fixOther = false;
+  final shown = otherValues.take(3).map(fmtN).join(', ');
+  final otherNote = otherValues.isEmpty
+      ? null
+      : 'Now $shown${otherValues.length > 3 ? '…' : ''} kcal';
+  return showAdaptiveDialog<({bool fill, bool stale, bool other})>(
     context: context,
     builder: (ctx) => StatefulBuilder(
       builder: (ctx, setState) {
@@ -921,6 +928,15 @@ Future<({bool fill, bool stale})?> askUpdatePastLines(
                       'Update ${plural(stale, 'logged line')} still at the '
                       'old ${fmtN(oldCalories)} kcal',
                 ),
+              if (other > 0)
+                option(
+                  value: fixOther,
+                  onChanged: (v) => fixOther = v,
+                  label:
+                      'Replace ${plural(other, 'logged line')} that '
+                      '${other == 1 ? 'has' : 'have'} different calories',
+                  note: otherNote,
+                ),
             ],
           ),
           actions: [
@@ -929,8 +945,12 @@ Future<({bool fill, bool stale})?> askUpdatePastLines(
               child: const Text('Leave as is'),
             ),
             TextButton(
-              onPressed: fill || fixStale
-                  ? () => Navigator.pop(ctx, (fill: fill, stale: fixStale))
+              onPressed: fill || fixStale || fixOther
+                  ? () => Navigator.pop(ctx, (
+                      fill: fill,
+                      stale: fixStale,
+                      other: fixOther,
+                    ))
                   : null,
               child: const Text('Update'),
             ),
