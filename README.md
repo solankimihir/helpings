@@ -50,3 +50,15 @@ flutter run             # on a connected device / emulator / simulator
 
 Bump `AppDatabase.version` in `lib/data/database.dart` and add a new
 `if (from < N)` step to `_migrate`. Never edit a step that has shipped.
+
+## License
+
+Copyright (C) 2026 Mihir Solanki
+
+Helpings is free software: you can redistribute it and/or modify it under the
+terms of the GNU General Public License as published by the Free Software
+Foundation, either version 3 of the License, or (at your option) any later
+version. See [LICENSE](LICENSE).
+
+The bundled fonts, Lexend and DM Serif Display, are under the SIL Open Font
+License (`assets/fonts/OFL-*.txt`).
