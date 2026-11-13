@@ -1,8 +1,20 @@
-# Helpings
+<p align="center">
+  <img src="docs/readme/logo.png" width="112" height="112" alt="Helpings logo">
+</p>
 
-A calm, simple meal log for Android, built with Flutter. Write down what you
-ate in about ten seconds, see today's calories at a glance, and look back on
-any day.
+<h1 align="center">Helpings</h1>
+
+<p align="center">A calm, exact meal log for Android.</p>
+
+<p align="center">
+  <a href="pubspec.yaml"><img alt="Version" src="https://img.shields.io/badge/dynamic/yaml?url=https%3A%2F%2Fraw.githubusercontent.com%2Fsolankimihir%2Fhelpings%2Fmain%2Fpubspec.yaml&query=%24.version&label=version&color=2E854D"></a>
+  <a href="LICENSE"><img alt="License: GPL-3.0" src="https://img.shields.io/badge/license-GPL--3.0-2E854D"></a>
+  <img alt="Platform: Android" src="https://img.shields.io/badge/platform-Android-2E854D">
+  <img alt="Built with Flutter" src="https://img.shields.io/badge/built%20with-Flutter-2E854D">
+</p>
+
+Write down what you ate in about ten seconds, see today's calories at a
+glance, and look back on any day.
 
 Calories are never estimated. Totals add up only what you enter, and when a
 line has no calories the total shows a `+` (for example `210+ kcal`) and says
@@ -11,11 +23,11 @@ analytics, and no internet permission.
 
 Website and privacy policy: <https://helpings.mihirsolanki.in>
 
-<p>
-  <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/1_home.png" width="200" alt="Home: today's calories and meals">
-  <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/2_add.png" width="200" alt="Add a meal with combos">
-  <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/3_trends.png" width="200" alt="Weekly trends">
-  <img src="android/fastlane/metadata/android/en-US/images/phoneScreenshots/7_items.png" width="200" alt="Your food list">
+<p align="center">
+  <img src="docs/readme/screens/1_home.png" width="200" alt="Home: today's calories and meals">
+  <img src="docs/readme/screens/2_add.png" width="200" alt="Add a meal with combos">
+  <img src="docs/readme/screens/3_trends.png" width="200" alt="Weekly trends">
+  <img src="docs/readme/screens/7_items.png" width="200" alt="Your food list">
 </p>
 
 ## Features
@@ -70,7 +82,8 @@ android/      app, home-screen widget (HelpingsWidgetProvider.kt),
               backup-folder bridge (MainActivity.kt), fastlane store listing
 test/         repository, migration and widget tests (in-memory SQLite via FFI)
 tool/store_screenshots/  generates the Play Store screenshots and feature graphic
-docs/         Play release guide, privacy policy, iOS widget notes
+tool/readme_images.py    README logo, rounded screenshots, GitHub social preview
+docs/         Play release guide, privacy policy, iOS widget notes, README images
 assets/fonts/ Lexend + DM Serif Display (SIL Open Font License)
 ```
 
@@ -94,6 +107,7 @@ Regenerate the store screenshots after UI changes:
 
 ```sh
 flutter test tool/store_screenshots
+python3 tool/readme_images.py   # README images (needs Pillow)
 ```
 
 Releasing to Google Play is covered in [docs/PLAY_RELEASE.md](docs/PLAY_RELEASE.md).
