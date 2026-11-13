@@ -54,8 +54,10 @@
         android:textColor="@color/widget_muted"
         android:textSize="12.5sp" />
 
-    <Space
-        android:layout_width="0dp"
+    <!-- Flexible gap pushing the button down. Widgets may only use the
+         RemoteViews view types (no Space), so an empty FrameLayout. -->
+    <FrameLayout
+        android:layout_width="match_parent"
         android:layout_height="0dp"
         android:layout_weight="1" />
 

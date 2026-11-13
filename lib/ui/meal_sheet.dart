@@ -254,6 +254,13 @@ class _MealSheetState extends ConsumerState<MealSheet> {
 
   /// Saves the current lines as a named combo for one-tap reuse.
   Future<void> _saveAsCombo() async {
+    if (_rows.isEmpty) {
+      setState(
+        () => _error =
+            'Add the items you eat together first, then save them as a combo.',
+      );
+      return;
+    }
     final entries = _validEntries();
     if (entries == null) return;
     final name = await promptText(
@@ -386,7 +393,32 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                   ),
                 ],
               ),
-              const SectionLabel('Items'),
+              // Items heading, with Save as combo always in reach.
+              Padding(
+                padding: const EdgeInsets.only(top: 12, bottom: 2),
+                child: Row(
+                  children: [
+                    const Expanded(
+                      child: SectionLabel(
+                        'Items',
+                        padding: EdgeInsets.only(top: 8, bottom: 5),
+                      ),
+                    ),
+                    Pill(
+                      label: 'Save as combo',
+                      icon: Icons.star_border_rounded,
+                      style: PillStyle.ghost,
+                      color: _rows.isEmpty ? c.inkA(.4) : c.link,
+                      fontSize: 13,
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 8,
+                        vertical: 6,
+                      ),
+                      onTap: _saveAsCombo,
+                    ),
+                  ],
+                ),
+              ),
               if (_previousDayMeal(data) case final prev?)
                 Padding(
                   padding: const EdgeInsets.only(bottom: 10),
@@ -422,21 +454,6 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                     onUnit: (u) => setState(() => r.unit = u),
                   ),
                 ),
-              if (_rows.isNotEmpty)
-                Align(
-                  alignment: Alignment.centerLeft,
-                  child: Pill(
-                    label: '☆ Save as combo',
-                    style: PillStyle.ghost,
-                    color: c.link,
-                    fontSize: 13,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 4,
-                      vertical: 6,
-                    ),
-                    onTap: _saveAsCombo,
-                  ),
-                ),
               if (data.combos.isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Wrap(
@@ -445,7 +462,8 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                   children: [
                     for (final combo in data.combos)
                       Pill(
-                        label: '★ ${combo.name}',
+                        label: combo.name,
+                        icon: Icons.star_rounded,
                         style: PillStyle.white,
                         fontSize: 13,
                         onTap: () {

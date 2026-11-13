@@ -144,9 +144,13 @@ class Pill extends StatelessWidget {
     this.padding = const EdgeInsets.symmetric(horizontal: 15, vertical: 9),
     this.weight = FontWeight.w500,
     this.color,
+    this.icon,
   });
 
   final String label;
+
+  /// Optional leading icon, in the text colour.
+  final IconData? icon;
   final VoidCallback? onTap;
   final PillStyle style;
   final double fontSize;
@@ -185,10 +189,22 @@ class Pill extends StatelessWidget {
         color: bg,
         border: border,
         padding: padding,
-        child: Text(
-          label,
-          style: sans(fontSize, weight: weight, color: color ?? fg),
-        ),
+        child: icon == null
+            ? Text(
+                label,
+                style: sans(fontSize, weight: weight, color: color ?? fg),
+              )
+            : Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(icon, size: fontSize + 3, color: color ?? fg),
+                  const SizedBox(width: 5),
+                  Text(
+                    label,
+                    style: sans(fontSize, weight: weight, color: color ?? fg),
+                  ),
+                ],
+              ),
       ),
     );
   }

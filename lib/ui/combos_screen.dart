@@ -76,7 +76,7 @@ class CombosScreen extends ConsumerWidget {
                         ),
                         child: Text(
                           'No combos yet. In Add Meal, add the items you '
-                          'often eat together, then tap “☆ Save as combo”.',
+                          'often eat together, then tap “Save as combo” next to Items.',
                           textAlign: TextAlign.center,
                           style: sans(13.5, color: c.inkA(.5), height: 1.45),
                         ),

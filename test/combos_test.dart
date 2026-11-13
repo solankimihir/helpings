@@ -98,11 +98,23 @@ void main() {
   testWidgets('save a combo from Add Meal, then add it in one tap', (
     tester,
   ) async {
+    tester.view.physicalSize = const Size(400, 1200);
+    tester.view.devicePixelRatio = 1;
+    addTearDown(tester.view.reset);
     final db = await pumpApp(tester);
     final search = find.widgetWithText(TextField, 'Search food — e.g. Roti');
 
     await tester.tap(find.text('+ Add Meal'));
     await tester.pumpAndSettle();
+    // Always visible; with nothing added yet it explains what to do.
+    await tester.tap(find.text('Save as combo'));
+    await tester.pumpAndSettle();
+    expect(
+      find.textContaining('Add the items you eat together first'),
+      findsOneWidget,
+    );
+    expect(find.byType(AlertDialog), findsNothing);
+
     await tester.enterText(search, 'rot');
     await tester.pumpAndSettle();
     await tester.tap(find.text('Roti  100', findRichText: true));
@@ -112,7 +124,7 @@ void main() {
     await tester.tap(find.text('Tea  90', findRichText: true));
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('☆ Save as combo'));
+    await tester.tap(find.text('Save as combo'));
     await tester.pumpAndSettle();
     await tester.enterText(
       find.descendant(
@@ -128,14 +140,14 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('★ Usual breakfast'), findsOneWidget);
+    expect(find.text('Usual breakfast'), findsOneWidget);
 
     // A new meal: one tap adds both lines.
     await tester.tap(find.text('Cancel'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('+ Add Meal'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('★ Usual breakfast'));
+    await tester.tap(find.text('Usual breakfast'));
     await tester.pumpAndSettle();
     // Adding scrolls the sheet down to the search box, so check the saved
     // meal rather than rows that may be offscreen.
