@@ -121,6 +121,13 @@ Bump `AppDatabase.version` in `lib/data/database.dart` and add a new
 `if (from < N)` step to `_migrate`. Never edit a step that has shipped.
 Backups from older versions are migrated on restore.
 
+## Built with AI assistance
+
+Helpings is developed with the help of AI: Anthropic's Claude (via Claude
+Code) is used to write and review code, tests and documentation. Every change
+is directed, reviewed and tested on a real device by the maintainer, who is
+responsible for the app.
+
 ## License
 
 Copyright (C) 2026 Mihir Solanki
