@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Home-screen widget colours: the app's light palette (lib/theme/app_theme.dart). -->
+<resources>
+    <color name="widget_surface">#FFFFFF</color>
+    <color name="widget_ink">#17201C</color>
+    <color name="widget_muted">#8017201C</color>
+    <color name="widget_primary">#2E854D</color>
+    <color name="widget_on_primary">#FFFFFF</color>
+</resources>

@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:typed_data';
 
 import 'package:flutter/foundation.dart' show ValueChanged;
@@ -7,6 +8,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:helpings/app.dart';
 import 'package:helpings/data/backup_folder.dart';
 import 'package:helpings/data/database.dart';
+import 'package:helpings/data/home_widget_data.dart';
 import 'package:helpings/data/reminders.dart';
 import 'package:helpings/data/repository.dart';
 import 'package:helpings/state/app_state.dart';
@@ -20,6 +22,7 @@ Future<AppDatabase> pumpApp(
   String path = inMemoryDatabasePath,
   List<Override> overrides = const [],
   ReminderScheduler? reminders,
+  HomeWidgetBridge? homeWidget,
 }) async {
   sqfliteFfiInit();
   final db = await AppDatabase.open(
@@ -35,6 +38,9 @@ Future<AppDatabase> pumpApp(
         // Never touch the real notification plugin in tests.
         reminderSchedulerProvider.overrideWithValue(
           reminders ?? FakeReminderScheduler(),
+        ),
+        homeWidgetBridgeProvider.overrideWithValue(
+          homeWidget ?? FakeHomeWidgetBridge(),
         ),
         ...overrides,
       ],
@@ -123,4 +129,24 @@ class FakeReminderScheduler implements ReminderScheduler {
 
   @override
   Future<String?> launchTypeId() async => launchedWith;
+}
+
+/// Records what the home-screen widget would have been sent.
+class FakeHomeWidgetBridge implements HomeWidgetBridge {
+  FakeHomeWidgetBridge({this.launchedWith});
+
+  Uri? launchedWith;
+  final published = <WidgetPayload>[];
+  final _clicks = StreamController<Uri?>.broadcast();
+
+  void click(Uri uri) => _clicks.add(uri);
+
+  @override
+  Future<void> publish(WidgetPayload payload) async => published.add(payload);
+
+  @override
+  Future<Uri?> launchUri() async => launchedWith;
+
+  @override
+  Stream<Uri?> get clicks => _clicks.stream;
 }
