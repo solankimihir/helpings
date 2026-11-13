@@ -160,29 +160,95 @@ void main() {
     ]);
   });
 
-  testWidgets('settings: rename and delete a combo', (tester) async {
-    tester.view.physicalSize = const Size(800, 2400);
-    tester.view.devicePixelRatio = 1;
-    addTearDown(tester.view.reset);
-    await pumpApp(tester, seed: (r) => r.saveCombo(_usual));
-    await tester.tap(find.text('Settings'));
-    await tester.pumpAndSettle();
-    expect(find.text('Usual breakfast'), findsOneWidget); // row subtitle
-    await tester.tap(find.text('Combos'));
-    await tester.pumpAndSettle();
-    expect(find.text('2 Roti · 1 Tea · 290 kcal'), findsOneWidget);
+  group('Settings > Combos', () {
+    Future<void> openCombos(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 1400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await pumpApp(tester, seed: (r) => r.saveCombo(_usual));
+      await tester.tap(find.text('Settings'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Combos'));
+      await tester.pumpAndSettle();
+      expect(find.text('2 Roti · 1 Tea · 290 kcal'), findsOneWidget);
+    }
 
-    await tester.tap(find.text('Usual breakfast'));
-    await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField), 'Morning');
-    await tester.tap(find.text('Save'));
-    await tester.pumpAndSettle();
-    expect(find.text('Morning'), findsOneWidget);
+    Finder field(String hint) => find.widgetWithText(TextField, hint);
 
-    await tester.tap(find.byIcon(Icons.delete_outline_rounded));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Delete'));
-    await tester.pumpAndSettle();
-    expect(find.textContaining('No combos yet'), findsOneWidget);
+    testWidgets('+ New builds a combo without logging a meal', (tester) async {
+      await openCombos(tester);
+      await tester.tap(find.text('+ New'));
+      await tester.pumpAndSettle();
+      expect(find.text('New Combo'), findsOneWidget);
+
+      await tester.enterText(field('e.g. Usual breakfast'), 'Light dinner');
+      await tester.enterText(field('Search food — e.g. Roti'), 'dal');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Dal  180', findRichText: true));
+      await tester.pumpAndSettle();
+      await tester.enterText(field('Search food — e.g. Roti'), 'rot');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Roti  100', findRichText: true));
+      await tester.pumpAndSettle();
+      expect(find.text('280 kcal'), findsOneWidget); // live total
+
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(find.text('Light dinner'), findsOneWidget);
+      expect(find.text('1 cup Dal · 1 Roti · 280 kcal'), findsOneWidget);
+    });
+
+    testWidgets('tapping a combo edits its name and items', (tester) async {
+      await openCombos(tester);
+      await tester.tap(find.text('Usual breakfast'));
+      await tester.pumpAndSettle();
+      expect(find.text('Edit Combo'), findsOneWidget);
+
+      await tester.enterText(
+        field('e.g. Usual breakfast'),
+        'Weekday breakfast',
+      );
+      await tester.tap(find.byIcon(Icons.close_rounded).last); // drop Tea
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(find.text('Weekday breakfast'), findsOneWidget);
+      expect(find.text('2 Roti · 200 kcal'), findsOneWidget);
+    });
+
+    testWidgets('a combo can be deleted from its row', (tester) async {
+      await openCombos(tester);
+      await tester.tap(find.byIcon(Icons.delete_outline_rounded));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('No combos yet'), findsOneWidget);
+    });
+
+    testWidgets('a combo can be deleted from its editor', (tester) async {
+      await openCombos(tester);
+      await tester.tap(find.text('Usual breakfast'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Delete combo'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(TextButton, 'Delete'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('No combos yet'), findsOneWidget);
+    });
+
+    testWidgets('a combo name must be unique', (tester) async {
+      await openCombos(tester);
+      await tester.tap(find.text('+ New'));
+      await tester.pumpAndSettle();
+      await tester.enterText(field('e.g. Usual breakfast'), 'usual BREAKFAST');
+      await tester.enterText(field('Search food — e.g. Roti'), 'tea');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Tea  90', findRichText: true));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Save'));
+      await tester.pumpAndSettle();
+      expect(find.textContaining('already exists'), findsOneWidget);
+      expect(find.text('New Combo'), findsOneWidget); // still open
+    });
   });
 }

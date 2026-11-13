@@ -31,21 +31,22 @@ const _remoteViewsClasses = {
 
 void main() {
   test('widget layouts only use views RemoteViews can inflate', () {
-    final info = File(
-      'android/app/src/main/res/xml/helpings_widget_info.xml',
-    ).readAsStringSync();
-    final layouts = RegExp(
-      r'@layout/(\w+)',
-    ).allMatches(info).map((m) => m.group(1)!).toSet();
+    final info = File('android/app/src/main/res/xml/helpings_widget_info.xml')
+        .readAsStringSync();
+    final layouts = RegExp(r'@layout/(\w+)')
+        .allMatches(info)
+        .map((m) => m.group(1)!)
+        .toSet();
     expect(layouts, isNotEmpty);
 
     for (final name in layouts) {
-      final xml = File(
-        'android/app/src/main/res/layout/$name.xml',
-      ).readAsStringSync().replaceAll(RegExp(r'<!--.*?-->', dotAll: true), '');
-      final tags = RegExp(
-        r'<([A-Za-z][\w.]*)',
-      ).allMatches(xml).map((m) => m.group(1)!).toSet();
+      final xml = File('android/app/src/main/res/layout/$name.xml')
+          .readAsStringSync()
+          .replaceAll(RegExp(r'<!--.*?-->', dotAll: true), '');
+      final tags = RegExp(r'<([A-Za-z][\w.]*)')
+          .allMatches(xml)
+          .map((m) => m.group(1)!)
+          .toSet();
       expect(
         tags.difference(_remoteViewsClasses),
         isEmpty,

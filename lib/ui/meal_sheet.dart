@@ -10,6 +10,7 @@ import 'item_sheet.dart';
 import 'shell.dart';
 import 'meal_type_sheet.dart';
 import 'widgets/common.dart';
+import 'widgets/line_editor.dart';
 
 /// Add a new meal (on [date], default today), or edit [editing]. A
 /// [template] pre-fills a new meal from an existing one ("Log again").
@@ -48,30 +49,6 @@ Future<void> showMealSheet(
   );
 }
 
-class _DraftRow {
-  _DraftRow({
-    required this.itemId,
-    required this.name,
-    required String qty,
-    required this.unit,
-    required String cal,
-  }) : rid = newId(),
-       qty = TextEditingController(text: qty),
-       cal = TextEditingController(text: cal);
-
-  final String rid;
-  final String? itemId;
-  final String name;
-  final TextEditingController qty;
-  final TextEditingController cal;
-  FoodUnit? unit;
-
-  void dispose() {
-    qty.dispose();
-    cal.dispose();
-  }
-}
-
 class MealSheet extends ConsumerStatefulWidget {
   const MealSheet({
     super.key,
@@ -102,7 +79,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
   late String _time;
   late final TextEditingController _notes;
   final _search = TextEditingController();
-  final _rows = <_DraftRow>[];
+  final _rows = <DraftLine>[];
   final _pickKey = GlobalKey();
   String _error = '';
   bool _saving = false;
@@ -136,17 +113,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
 
   /// Appends editable copies of logged lines.
   void _addEntries(List<MealEntry> entries, AppData data) {
-    for (final e in entries) {
-      _rows.add(
-        _DraftRow(
-          itemId: e.itemId,
-          name: data.displayName(e),
-          qty: fmtQty(e.qty),
-          unit: e.unit,
-          cal: fmtQty(e.calories),
-        ),
-      );
-    }
+    _rows.addAll([for (final e in entries) draftFromEntry(e, data)]);
   }
 
   /// "yesterday’s Lunch", "today’s Lunch", or "Lunch from November 3".
@@ -184,15 +151,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
     setState(() {
       _error = '';
       _search.clear();
-      _rows.add(
-        _DraftRow(
-          itemId: item.id,
-          name: item.name,
-          qty: '1',
-          unit: item.defaultUnit ?? fallbackUnit,
-          cal: fmtQty(item.defaultCalories),
-        ),
-      );
+      _rows.add(draftFromItem(item, fallbackUnit));
     });
     _revealPicker();
   }
@@ -211,7 +170,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
     });
   }
 
-  void _removeRow(_DraftRow r) {
+  void _removeRow(DraftLine r) {
     setState(() => _rows.remove(r));
     r.dispose();
   }
@@ -227,29 +186,9 @@ class _MealSheetState extends ConsumerState<MealSheet> {
   /// The draft rows as fresh entries, or null (with [_error] set) if a
   /// quantity or calorie value isn't a number.
   List<MealEntry>? _validEntries() {
-    for (final r in _rows) {
-      final q = r.qty.text.trim();
-      if (q.isNotEmpty && parseNum(q) == null) {
-        setState(() => _error = 'Quantity must be a number.');
-        return null;
-      }
-      final cal = r.cal.text.trim();
-      if (cal.isNotEmpty && parseNum(cal) == null) {
-        setState(() => _error = 'Calories must be a number.');
-        return null;
-      }
-    }
-    return [
-      for (final r in _rows)
-        MealEntry(
-          id: newId(),
-          itemId: r.itemId,
-          nameSnapshot: r.name,
-          qty: r.qty.text.trim().isEmpty ? null : parseNum(r.qty.text),
-          unit: r.unit,
-          calories: r.cal.text.trim().isEmpty ? null : parseNum(r.cal.text),
-        ),
-    ];
+    final r = draftsToEntries(_rows);
+    if (r.error != null) setState(() => _error = r.error!);
+    return r.entries;
   }
 
   /// Saves the current lines as a named combo for one-tap reuse.
@@ -448,7 +387,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                 Padding(
                   key: ValueKey(r.rid),
                   padding: const EdgeInsets.only(bottom: 10),
-                  child: _DraftRowCard(
+                  child: DraftLineCard(
                     row: r,
                     onRemove: () => _removeRow(r),
                     onUnit: (u) => setState(() => r.unit = u),
@@ -478,7 +417,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                 ),
               ],
               const SizedBox(height: 6),
-              _PickPanel(
+              FoodPickPanel(
                 key: _pickKey,
                 controller: _search,
                 items: data.items,
@@ -507,208 +446,5 @@ class _MealSheetState extends ConsumerState<MealSheet> {
     if (key == todayKey()) return 'Today';
     if (key == shiftKey(-1)) return 'Yesterday';
     return dayGroupLabel(key);
-  }
-}
-
-class _DraftRowCard extends StatelessWidget {
-  const _DraftRowCard({
-    required this.row,
-    required this.onRemove,
-    required this.onUnit,
-  });
-
-  final _DraftRow row;
-  final VoidCallback onRemove;
-  final ValueChanged<FoodUnit?> onUnit;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    const fieldPad = EdgeInsets.symmetric(horizontal: 10, vertical: 9);
-    return AppCard(
-      radius: 18,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Column(
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  row.name,
-                  style: sans(15.5, weight: FontWeight.w500, color: c.ink),
-                ),
-              ),
-              Tap(
-                onTap: onRemove,
-                color: c.bg,
-                semanticLabel: 'Remove ${row.name}',
-                child: SizedBox(
-                  width: 26,
-                  height: 26,
-                  child: Icon(Icons.close_rounded, size: 15, color: c.inkA(.5)),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 10),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              SizedBox(
-                width: 66,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const FieldLabel('Qty', small: true),
-                    AppTextField(
-                      controller: row.qty,
-                      radius: 11,
-                      padding: fieldPad,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: decimalOnly,
-                      semanticLabel: 'Quantity',
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const FieldLabel('Unit', small: true),
-                    UnitPicker(
-                      value: row.unit,
-                      allowNone: row.unit == null,
-                      onChanged: onUnit,
-                    ),
-                  ],
-                ),
-              ),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const FieldLabel('Calories', small: true),
-                    AppTextField(
-                      controller: row.cal,
-                      hint: 'optional',
-                      radius: 11,
-                      padding: fieldPad,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
-                      ),
-                      inputFormatters: decimalOnly,
-                      semanticLabel: 'Calories',
-                    ),
-                  ],
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Search box + matching active food chips + "Create …".
-class _PickPanel extends StatelessWidget {
-  const _PickPanel({
-    super.key,
-    required this.controller,
-    required this.items,
-    required this.onChanged,
-    required this.onPick,
-    required this.onCreate,
-  });
-
-  final TextEditingController controller;
-  final List<FoodItem> items;
-  final VoidCallback onChanged;
-  final ValueChanged<FoodItem> onPick;
-  final VoidCallback onCreate;
-
-  @override
-  Widget build(BuildContext context) {
-    final c = context.c;
-    final q = controller.text.trim().toLowerCase();
-    final results = items
-        .where(
-          (i) => i.active && (q.isEmpty || i.name.toLowerCase().contains(q)),
-        )
-        .take(8)
-        .toList();
-    final exact = items.any((i) => i.name.toLowerCase() == q);
-
-    return AppCard(
-      radius: 18,
-      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          AppTextField(
-            controller: controller,
-            hint: 'Search food — e.g. Roti',
-            radius: 12,
-            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 11),
-            textCapitalization: TextCapitalization.words,
-            onChanged: (_) => onChanged(),
-            textInputAction: TextInputAction.done,
-            onSubmitted: (_) {
-              if (results.length == 1) onPick(results.first);
-            },
-          ),
-          if (results.isNotEmpty) ...[
-            const SizedBox(height: 10),
-            Wrap(
-              spacing: 7,
-              runSpacing: 7,
-              children: [
-                for (final i in results)
-                  Tap(
-                    onTap: () => onPick(i),
-                    color: c.bg,
-                    border: Border.all(color: c.inkA(.1)),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 13,
-                      vertical: 9,
-                    ),
-                    child: Text.rich(
-                      TextSpan(
-                        text: i.name,
-                        children: [
-                          if (i.defaultCalories != null)
-                            TextSpan(
-                              text: '  ${fmtN(i.defaultCalories)}',
-                              style: sans(12.5, color: c.inkA(.4)),
-                            ),
-                        ],
-                      ),
-                      style: sans(14, color: c.ink),
-                    ),
-                  ),
-              ],
-            ),
-          ],
-          if (q.isNotEmpty && !exact) ...[
-            const SizedBox(height: 10),
-            DashedBox(
-              radius: 13,
-              padding: const EdgeInsets.all(11),
-              onTap: onCreate,
-              child: Text(
-                '+ Create “${controller.text.trim()}” as a new food item',
-                textAlign: TextAlign.center,
-                style: sans(13.5, weight: FontWeight.w500, color: c.greenText),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 }

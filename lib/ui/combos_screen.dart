@@ -3,9 +3,9 @@ import 'package:material_ui/material_ui.dart';
 
 import '../data/format.dart';
 import '../data/models.dart';
-import '../data/repository.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import 'combo_sheet.dart';
 import 'widgets/common.dart';
 
 Future<void> openCombos(BuildContext context) =>
@@ -31,25 +31,35 @@ class CombosScreen extends ConsumerWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(16, 8, 16, 0),
-              child: DecoratedBox(
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  boxShadow: softShadow(context),
-                ),
-                child: Tap(
-                  onTap: () => Navigator.of(context).maybePop(),
-                  color: c.surface,
-                  semanticLabel: 'Back',
-                  child: SizedBox(
-                    width: 38,
-                    height: 38,
-                    child: Icon(
-                      Icons.chevron_left_rounded,
-                      size: 24,
-                      color: c.ink,
+              child: Row(
+                children: [
+                  DecoratedBox(
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      boxShadow: softShadow(context),
+                    ),
+                    child: Tap(
+                      onTap: () => Navigator.of(context).maybePop(),
+                      color: c.surface,
+                      semanticLabel: 'Back',
+                      child: SizedBox(
+                        width: 38,
+                        height: 38,
+                        child: Icon(
+                          Icons.chevron_left_rounded,
+                          size: 24,
+                          color: c.ink,
+                        ),
+                      ),
                     ),
                   ),
-                ),
+                  const Spacer(),
+                  Pill(
+                    label: '+ New',
+                    style: PillStyle.primary,
+                    onTap: () => showComboSheet(context),
+                  ),
+                ],
               ),
             ),
             Padding(
@@ -59,7 +69,7 @@ class CombosScreen extends ConsumerWidget {
             Padding(
               padding: const EdgeInsets.fromLTRB(22, 0, 22, 10),
               child: Text(
-                'Tap to rename. Drag to change the order.',
+                'Tap to edit. Drag to change the order.',
                 style: sans(13, color: c.inkA(.5)),
               ),
             ),
@@ -75,8 +85,9 @@ class CombosScreen extends ConsumerWidget {
                           vertical: 30,
                         ),
                         child: Text(
-                          'No combos yet. In Add Meal, add the items you '
-                          'often eat together, then tap “Save as combo” next to Items.',
+                          'No combos yet. Tap “+ New” to make one, or save '
+                          'the items of a meal you’re adding with “Save as '
+                          'combo”.',
                           textAlign: TextAlign.center,
                           style: sans(13.5, color: c.inkA(.5), height: 1.45),
                         ),
@@ -110,23 +121,6 @@ class _ComboRow extends ConsumerWidget {
   final Combo combo;
   final int index;
 
-  Future<void> _rename(BuildContext context, WidgetRef ref) async {
-    final name = await promptText(
-      context,
-      title: 'Rename combo',
-      action: 'Save',
-      initial: combo.name,
-    );
-    if (name == null || name == combo.name) return;
-    try {
-      await ref
-          .read(appDataProvider.notifier)
-          .saveCombo(combo.copyWith(name: name));
-    } on DuplicateNameException catch (e) {
-      if (context.mounted) toast(context, 'A combo named $e');
-    }
-  }
-
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
     final ok = await confirm(
       context,
@@ -146,7 +140,7 @@ class _ComboRow extends ConsumerWidget {
     return AppCard(
       radius: 18,
       padding: const EdgeInsets.fromLTRB(16, 10, 4, 10),
-      onTap: () => _rename(context, ref),
+      onTap: () => showComboSheet(context, editing: combo),
       child: Row(
         children: [
           Expanded(
