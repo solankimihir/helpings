@@ -4,10 +4,17 @@ EXACT, NEVER ESTIMATED
 Calories come only from what you enter. If a line has no calorie value, Helpings tells you the total is incomplete instead of making up a number.
 
 FAST LOGGING
-• Pick breakfast, lunch, dinner, snack or other — the time of day is pre-selected
+• The meal type is pre-selected from the time of day
 • Search your own food list; quantity, unit and calories pre-fill from your defaults
 • Not on the list? Create a new food right from the search
+• Save foods you eat together as a combo, then add them in one tap
+• Repeat yesterday's meal, or "Log again" any past meal
 • Add a note to any meal
+
+YOUR MEALS, YOUR WAY
+• Breakfast, lunch, dinner and snack to start — rename, reorder or hide them, and add your own (pre-workout, brunch…)
+• Optional reminders: a gentle nudge if a meal isn't logged by the time you choose
+• Home-screen widget with today's calories and a quick Add meal button
 
 YOUR FOOD LIST
 • Starts with everyday foods like roti, dal, rice, idli, poha and tea
@@ -15,12 +22,15 @@ YOUR FOOD LIST
 • Hide foods you no longer eat, or delete them — past meals keep their names
 • Changing a default never rewrites meals you already saved
 
-HISTORY
-• Meals grouped by day with daily totals
-• Filter by meal type
-• Swipe to delete, tap to view or edit
+HISTORY AND TRENDS
+• Swipe between days on the home screen, or jump to any date
+• Meals grouped by day with daily totals, filtered by meal type
+• Weekly and monthly trends: calories per day, your daily average and most-logged foods
 
-PRIVATE BY DESIGN
-Everything stays on your phone. Helpings has no account, no ads, no analytics and no internet access at all.
+YOUR DATA STAYS YOURS
+• Everything stays on your phone. No account, no ads, no analytics and no internet access at all
+• Save a backup copy whenever you like, or keep daily backups in a folder you choose (the last 30 are kept)
+• Restore from any backup file
+• Export all your meals as a spreadsheet (CSV)
 
-Light and dark mode follow your system setting.
+Light, dark or follow your system setting.

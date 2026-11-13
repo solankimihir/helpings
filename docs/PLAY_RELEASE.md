@@ -70,7 +70,19 @@ once step 7 is done):
 | Full description | `full_description.txt` |
 | App icon (512×512) | `images/icon.png` |
 | Feature graphic (1024×500) | `images/featureGraphic.png` |
-| Phone screenshots (1080×1920) | `images/phoneScreenshots/1…5_*.png` |
+| Phone screenshots (1080×1920) | `images/phoneScreenshots/1…7_*.png` |
+
+The screenshots and feature graphic are generated from the real app with sample
+data, as 24-bit PNGs (no alpha, as Play requires). After UI changes, regenerate
+them with:
+
+```sh
+flutter test tool/store_screenshots
+```
+
+The generator is `tool/store_screenshots/store_screenshots_test.dart`; the
+headlines and sample data live there. Dates in the images are the day you run it.
+The icon (`images/icon.png`) isn't generated; it comes from `assets/icon/`.
 
 ## 5. First release → Closed testing (manual upload)
 

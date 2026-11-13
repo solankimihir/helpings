@@ -1,1 +1,1 @@
-First release: log meals, track today’s calories, browse history and manage your food list.
+First release: log meals in seconds with exact calories, swipe between days, see weekly trends, save combos, set meal reminders, and keep daily backups. Includes a home-screen widget.
