@@ -69,6 +69,13 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Follow outside changes to the day (e.g. Trends → "Open day"); swipes
+    // set the provider themselves, so those are already on that page.
+    ref.listen(homeDayProvider, (_, day) {
+      if (_pages.hasClients && _pages.page?.round() != day) {
+        _pages.jumpToPage(day);
+      }
+    });
     final c = context.c;
     final offset = ref.watch(homeDayProvider);
     final key = shiftKey(-offset);
@@ -265,24 +272,29 @@ class _SummaryCard extends StatelessWidget {
           children: [
             Text(label.toUpperCase(), style: overline(context)),
             const SizedBox(height: 3),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.baseline,
-              textBaseline: TextBaseline.alphabetic,
-              children: [
-                Text(
-                  value,
-                  style: sans(
-                    32,
-                    weight: FontWeight.w700,
-                    color: c.ink,
-                    letterSpacing: -.64,
+            // Big totals on narrow phones shrink rather than overflow.
+            FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.baseline,
+                textBaseline: TextBaseline.alphabetic,
+                children: [
+                  Text(
+                    value,
+                    style: sans(
+                      32,
+                      weight: FontWeight.w700,
+                      color: c.ink,
+                      letterSpacing: -.64,
+                    ),
                   ),
-                ),
-                if (unit != null) ...[
-                  const SizedBox(width: 5),
-                  Text(unit, style: sans(13, color: c.inkA(.5))),
+                  if (unit != null) ...[
+                    const SizedBox(width: 5),
+                    Text(unit, style: sans(13, color: c.inkA(.5))),
+                  ],
                 ],
-              ],
+              ),
             ),
             const SizedBox(height: 1),
             Text(note, style: sans(11.5, color: c.inkA(.45))),

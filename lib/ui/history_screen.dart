@@ -6,6 +6,7 @@ import '../data/models.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'meal_detail_screen.dart';
+import 'trends_view.dart';
 import 'shell.dart';
 import 'widgets/common.dart';
 
@@ -26,6 +27,9 @@ class HistoryScreen extends ConsumerStatefulWidget {
 class _HistoryScreenState extends ConsumerState<HistoryScreen> {
   /// Meal type id; null = All.
   String? _filter;
+
+  /// Showing the Trends view instead of the meal list.
+  bool _trends = false;
 
   List<_DayGroup> _groups(AppData data) {
     final groups = <_DayGroup>[];
@@ -71,57 +75,79 @@ class _HistoryScreenState extends ConsumerState<HistoryScreen> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(22, 12, 22, 6),
-            child: Text('History', style: serif(32, color: c.ink)),
-          ),
-          SizedBox(
-            height: 52,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+            padding: const EdgeInsets.fromLTRB(22, 12, 16, 6),
+            child: Row(
               children: [
-                for (final t in <MealType?>[null, ...filterTypes])
+                Expanded(
+                  child: Text('History', style: serif(32, color: c.ink)),
+                ),
+                for (final (label, trends) in const [
+                  ('Meals', false),
+                  ('Trends', true),
+                ])
                   Padding(
-                    padding: const EdgeInsets.only(right: 7),
+                    padding: const EdgeInsets.only(left: 6),
                     child: AppChip(
-                      label: t?.name ?? 'All',
-                      selected: t?.id == _filter,
-                      onTap: () => setState(() => _filter = t?.id),
+                      label: label,
+                      selected: _trends == trends,
+                      onTap: () => setState(() => _trends = trends),
                     ),
                   ),
               ],
             ),
           ),
-          Expanded(
-            child: groups.isEmpty
-                ? Padding(
-                    padding: const EdgeInsets.fromLTRB(26, 40, 26, 0),
-                    child: Text(
-                      data.meals.isEmpty
-                          ? 'Meals you log will show up here.'
-                          : 'No meals match this filter.',
-                      textAlign: TextAlign.center,
-                      style: sans(14, color: c.inkA(.45)),
+          if (_trends) const Expanded(child: TrendsView()),
+          if (!_trends)
+            SizedBox(
+              height: 52,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.fromLTRB(16, 8, 16, 6),
+                children: [
+                  for (final t in <MealType?>[null, ...filterTypes])
+                    Padding(
+                      padding: const EdgeInsets.only(right: 7),
+                      child: AppChip(
+                        label: t?.name ?? 'All',
+                        selected: t?.id == _filter,
+                        onTap: () => setState(() => _filter = t?.id),
+                      ),
                     ),
-                  )
-                : ListView.builder(
-                    padding: EdgeInsets.fromLTRB(
-                      16,
-                      8,
-                      16,
-                      shellBottomInset(context),
+                ],
+              ),
+            ),
+          if (!_trends)
+            Expanded(
+              child: groups.isEmpty
+                  ? Padding(
+                      padding: const EdgeInsets.fromLTRB(26, 40, 26, 0),
+                      child: Text(
+                        data.meals.isEmpty
+                            ? 'Meals you log will show up here.'
+                            : 'No meals match this filter.',
+                        textAlign: TextAlign.center,
+                        style: sans(14, color: c.inkA(.45)),
+                      ),
+                    )
+                  : ListView.builder(
+                      padding: EdgeInsets.fromLTRB(
+                        16,
+                        8,
+                        16,
+                        shellBottomInset(context),
+                      ),
+                      itemCount: groups.length,
+                      itemBuilder: (context, i) => _GroupView(
+                        group: groups[i],
+                        typeName: data.typeName,
+                        onOpen: (m) => openMealDetail(context, m.id),
+                        confirmDelete: (m) =>
+                            _confirmDelete(m, data.typeName(m)),
+                        onDelete: (m) =>
+                            ref.read(appDataProvider.notifier).deleteMeal(m.id),
+                      ),
                     ),
-                    itemCount: groups.length,
-                    itemBuilder: (context, i) => _GroupView(
-                      group: groups[i],
-                      typeName: data.typeName,
-                      onOpen: (m) => openMealDetail(context, m.id),
-                      confirmDelete: (m) => _confirmDelete(m, data.typeName(m)),
-                      onDelete: (m) =>
-                          ref.read(appDataProvider.notifier).deleteMeal(m.id),
-                    ),
-                  ),
-          ),
+            ),
         ],
       ),
     );
