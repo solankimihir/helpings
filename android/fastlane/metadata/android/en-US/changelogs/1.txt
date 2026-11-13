@@ -1,1 +1,1 @@
-First release: log meals in seconds with exact calories, swipe between days, see weekly trends, save combos, set meal reminders, and keep daily backups. Includes a home-screen widget.
+First release: log meals quickly and easily with exact calories, swipe between days, see weekly trends, save combos, set meal reminders, and keep daily backups. Includes a home-screen widget.

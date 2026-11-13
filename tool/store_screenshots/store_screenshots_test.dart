@@ -568,8 +568,8 @@ void main() {
     await _write(
       tester,
       _Shot(
-        line1: 'Log a meal in',
-        line2: 'ten seconds',
+        line1: 'Log meals',
+        line2: 'quickly and easily',
         subtitle: 'Today’s calories and meals at a glance',
         screen: home,
       ),

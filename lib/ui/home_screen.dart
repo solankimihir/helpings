@@ -227,7 +227,7 @@ class _DayView extends ConsumerWidget {
                   const SizedBox(height: 6),
                   Text(
                     isToday
-                        ? 'Add your first meal of the day — it takes about ten seconds.'
+                        ? 'Add your first meal of the day — it only takes a moment.'
                         : 'Tap + Add Meal to log something for this day.',
                     textAlign: TextAlign.center,
                     style: sans(13.5, color: c.inkA(.5), height: 1.45),

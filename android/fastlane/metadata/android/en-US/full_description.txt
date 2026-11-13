@@ -1,4 +1,4 @@
-Helpings is a calm, simple meal log. Write down what you ate in about ten seconds, see today's calories at a glance, and look back on any day — without accounts, ads or guesswork.
+Helpings is a calm, simple meal log. Log what you ate quickly and easily, see today's calories at a glance, and look back on any day — without accounts, ads or guesswork.
 
 EXACT, NEVER ESTIMATED
 Calories come only from what you enter. If a line has no calorie value, Helpings tells you the total is incomplete instead of making up a number.
