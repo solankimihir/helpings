@@ -32,9 +32,11 @@ class CurrentTab extends Notifier<AppTab> {
   void select(AppTab t) => state = t;
 }
 
-/// Bottom space screens reserve so content clears the tab bar + Add button.
+/// Bottom space screens reserve so content clears the tab bar (and the Add
+/// button, on tabs that show it). The shell's Scaffold reports their height
+/// as bottom padding, since the body extends behind them.
 double shellBottomInset(BuildContext context) =>
-    130 + MediaQuery.paddingOf(context).bottom;
+    MediaQuery.paddingOf(context).bottom + 16;
 
 class Shell extends ConsumerWidget {
   const Shell({super.key});
@@ -70,35 +72,27 @@ class Shell extends ConsumerWidget {
 
     final showQuickAdd = tab == AppTab.home || tab == AppTab.history;
 
+    // A real bottom bar, so snackbars float above it rather than over it.
     return Scaffold(
       backgroundColor: c.bg,
-      body: Stack(
+      extendBody: true,
+      body: body,
+      bottomNavigationBar: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
-          Positioned.fill(child: body),
-          Positioned(
-            left: 0,
-            right: 0,
-            bottom: 0,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (showQuickAdd && data.hasValue)
-                  Padding(
-                    padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
-                    child: _AddMealButton(
-                      onTap: () => showMealSheet(
-                        context,
-                        date: tab == AppTab.home ? homeDayKey(ref) : null,
-                      ),
-                    ),
-                  ),
-                _TabBar(
-                  current: tab,
-                  onSelect: (t) =>
-                      ref.read(currentTabProvider.notifier).select(t),
+          if (showQuickAdd && data.hasValue)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(20, 0, 20, 12),
+              child: _AddMealButton(
+                onTap: () => showMealSheet(
+                  context,
+                  date: tab == AppTab.home ? homeDayKey(ref) : null,
                 ),
-              ],
+              ),
             ),
+          _TabBar(
+            current: tab,
+            onSelect: (t) => ref.read(currentTabProvider.notifier).select(t),
           ),
         ],
       ),

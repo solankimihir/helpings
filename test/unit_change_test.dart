@@ -126,6 +126,11 @@ void main() {
       expect(find.text('Update past meals?'), findsNothing);
       expect(await units(tester, db), [FoodUnit.cup, FoodUnit.gram]);
       expect(find.text('Changed the unit on 2 lines'), findsOneWidget);
+      // The toast floats above the tab bar instead of covering it.
+      expect(
+        tester.getRect(find.byType(SnackBar)).bottom,
+        lessThanOrEqualTo(tester.getRect(find.text('Home')).top),
+      );
 
       await tester.tap(find.text('Undo'));
       await tester.pumpAndSettle();

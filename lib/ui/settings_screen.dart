@@ -109,7 +109,7 @@ class SettingsScreen extends ConsumerWidget {
                 16,
                 14,
                 16,
-                shellBottomInset(context) - 60,
+                shellBottomInset(context),
               ),
               children: [
                 AppCard(

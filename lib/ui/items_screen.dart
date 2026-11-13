@@ -85,7 +85,7 @@ class _ItemsScreenState extends ConsumerState<ItemsScreen> {
                 16,
                 10,
                 16,
-                shellBottomInset(context) - 60,
+                shellBottomInset(context),
               ),
               children: [
                 Padding(
