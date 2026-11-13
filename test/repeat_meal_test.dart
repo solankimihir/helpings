@@ -66,11 +66,11 @@ void main() {
     await pumpApp(tester, seed: (r) => r.saveMeal(_yesterdayLunch));
     await tester.tap(find.text('+ Add Meal'));
     await tester.pumpAndSettle();
-    const suggestion = '↻ Same as yesterday’s Lunch';
+    const suggestion = 'Same as yesterday’s Lunch';
 
     await tester.tap(_inSheet('Dinner'));
     await tester.pumpAndSettle();
-    expect(find.textContaining('↻ Same as'), findsNothing);
+    expect(find.textContaining('Same as yesterday'), findsNothing);
 
     await tester.tap(_inSheet('Lunch'));
     await tester.pumpAndSettle();

@@ -107,6 +107,7 @@ class _TypeRow extends StatelessWidget {
     final start = type.startMinute;
     final details = [
       if (start != null) 'from ${fmtTime(minuteKey(start))}',
+      if (type.remindMinute case final r?) 'reminds ${fmtTime(minuteKey(r))}',
       if (!type.active) 'hidden',
     ].join(' · ');
     return AppCard(

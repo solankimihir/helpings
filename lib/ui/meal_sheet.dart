@@ -364,7 +364,8 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Pill(
-                      label: '↻ Same as ${_sameAsLabel(prev, data)}',
+                      label: 'Same as ${_sameAsLabel(prev, data)}',
+                      icon: Icons.replay_rounded,
                       style: PillStyle.white,
                       onTap: () => setState(() {
                         _error = '';
