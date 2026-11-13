@@ -11,6 +11,7 @@ class MealType {
     this.position = 0,
     this.active = true,
     this.startMinute,
+    this.remindMinute,
   });
 
   final String id;
@@ -25,17 +26,22 @@ class MealType {
   /// "Usually starts at", minutes after midnight. Null: never auto-picked.
   final int? startMinute;
 
+  /// Daily reminder time, minutes after midnight. Null: no reminder.
+  final int? remindMinute;
+
   MealType copyWith({
     String? name,
     int? position,
     bool? active,
     int? Function()? startMinute,
+    int? Function()? remindMinute,
   }) => MealType(
     id: id,
     name: name ?? this.name,
     position: position ?? this.position,
     active: active ?? this.active,
     startMinute: startMinute != null ? startMinute() : this.startMinute,
+    remindMinute: remindMinute != null ? remindMinute() : this.remindMinute,
   );
 
   Map<String, Object?> toRow() => {
@@ -44,6 +50,7 @@ class MealType {
     'position': position,
     'active': active ? 1 : 0,
     'start_minute': startMinute,
+    'remind_minute': remindMinute,
   };
 
   factory MealType.fromRow(Map<String, Object?> r) => MealType(
@@ -52,6 +59,7 @@ class MealType {
     position: r['position'] as int,
     active: (r['active'] as int) == 1,
     startMinute: r['start_minute'] as int?,
+    remindMinute: r['remind_minute'] as int?,
   );
 
   @override
@@ -61,10 +69,12 @@ class MealType {
       other.name == name &&
       other.position == position &&
       other.active == active &&
-      other.startMinute == startMinute;
+      other.startMinute == startMinute &&
+      other.remindMinute == remindMinute;
 
   @override
-  int get hashCode => Object.hash(id, name, position, active, startMinute);
+  int get hashCode =>
+      Object.hash(id, name, position, active, startMinute, remindMinute);
 }
 
 /// Picks the type for a new meal at [now]: the visible type whose start time

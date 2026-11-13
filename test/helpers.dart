@@ -1,11 +1,13 @@
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show ValueChanged;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/misc.dart' show Override;
 import 'package:flutter_test/flutter_test.dart';
 import 'package:helpings/app.dart';
 import 'package:helpings/data/backup_folder.dart';
 import 'package:helpings/data/database.dart';
+import 'package:helpings/data/reminders.dart';
 import 'package:helpings/data/repository.dart';
 import 'package:helpings/state/app_state.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
@@ -17,6 +19,7 @@ Future<AppDatabase> pumpApp(
   Future<void> Function(Repository repo)? seed,
   String path = inMemoryDatabasePath,
   List<Override> overrides = const [],
+  ReminderScheduler? reminders,
 }) async {
   sqfliteFfiInit();
   final db = await AppDatabase.open(
@@ -29,6 +32,10 @@ Future<AppDatabase> pumpApp(
     ProviderScope(
       overrides: [
         databaseProvider.overrideWith((ref) async => db),
+        // Never touch the real notification plugin in tests.
+        reminderSchedulerProvider.overrideWithValue(
+          reminders ?? FakeReminderScheduler(),
+        ),
         ...overrides,
       ],
       child: const HelpingsApp(),
@@ -84,4 +91,36 @@ class FakeBackupFolder implements BackupFolder {
 
   @override
   Future<void> release(String token) async => released.add(token);
+}
+
+/// Records what would have been scheduled.
+class FakeReminderScheduler implements ReminderScheduler {
+  FakeReminderScheduler({this.allow = true, this.launchedWith});
+
+  /// What the permission prompt answers.
+  bool allow;
+  String? launchedWith;
+  int permissionRequests = 0;
+
+  /// Every call to [replaceAll], in order.
+  final calls = <List<ReminderSlot>>[];
+  List<ReminderSlot> get scheduled => calls.isEmpty ? const [] : calls.last;
+
+  ValueChanged<String>? tapHandler;
+
+  @override
+  set onTap(ValueChanged<String>? handler) => tapHandler = handler;
+
+  @override
+  Future<bool> requestPermission() async {
+    permissionRequests++;
+    return allow;
+  }
+
+  @override
+  Future<void> replaceAll(List<ReminderSlot> slots) async =>
+      calls.add(List.of(slots));
+
+  @override
+  Future<String?> launchTypeId() async => launchedWith;
 }

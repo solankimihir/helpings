@@ -36,6 +36,7 @@ class AppData {
     this.themeMode = ThemeMode.system,
     this.lastBackupAt,
     this.autoBackup,
+    this.remindersOn = false,
   }) : _byId = {for (final i in items) i.id: i},
        _typeById = {for (final t in mealTypes) t.id: t};
 
@@ -68,6 +69,9 @@ class AppData {
 
   /// Null when automatic backups are off.
   final AutoBackupStatus? autoBackup;
+
+  /// Meal reminder notifications are enabled on this device.
+  final bool remindersOn;
   final Map<String, FoodItem> _byId;
 
   FoodItem? itemById(String? id) => id == null ? null : _byId[id];
@@ -108,6 +112,7 @@ const _kAutoFolder = 'auto_backup_folder';
 const _kAutoFolderName = 'auto_backup_folder_name';
 const _kAutoLastDay = 'auto_backup_last_day';
 const _kAutoError = 'auto_backup_error';
+const _kRemindersOn = 'reminders_on';
 
 /// Settings that describe this device rather than the user's data, so a
 /// restore from another phone (or an old file) must not overwrite them.
@@ -117,6 +122,7 @@ const deviceSettings = {
   _kAutoFolderName,
   _kAutoLastDay,
   _kAutoError,
+  _kRemindersOn,
 };
 
 ThemeMode _parseThemeMode(String? v) => ThemeMode.values.firstWhere(
@@ -151,6 +157,7 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       defaultUnit: FoodUnit.tryParse(settings[_kDefaultUnit]) ?? FoodUnit.piece,
       themeMode: _parseThemeMode(settings[_kThemeMode]),
       lastBackupAt: DateTime.tryParse(settings[_kLastBackup] ?? ''),
+      remindersOn: settings[_kRemindersOn] == '1',
       autoBackup: folder == null
           ? null
           : AutoBackupStatus(
@@ -238,6 +245,9 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
     final others = state.requireValue.visibleTypes.where((t) => t.id != id);
     if (others.isEmpty) throw const LastMealTypeException();
   }
+
+  Future<void> setRemindersOn(bool on) =>
+      _mutate((r) => r.setSetting(_kRemindersOn, on ? '1' : null));
 
   Future<void> setDefaultUnit(FoodUnit u) =>
       _mutate((r) => r.setSetting(_kDefaultUnit, u.name));

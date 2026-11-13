@@ -8,9 +8,11 @@ import '../data/backup.dart';
 import '../data/csv_export.dart';
 import '../data/database.dart';
 import '../data/format.dart';
+import '../data/reminders.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'combos_screen.dart';
+import 'meal_type_sheet.dart' show minuteKey;
 import 'meal_types_screen.dart';
 import 'shell.dart';
 import 'widgets/common.dart';
@@ -198,6 +200,14 @@ class SettingsScreen extends ConsumerWidget {
                               ),
                             ],
                           ),
+                        ),
+                      ),
+                      row(
+                        title: 'Meal reminders',
+                        subtitle: _remindersSubtitle(data),
+                        trailing: Switch.adaptive(
+                          value: data.remindersOn,
+                          onChanged: (on) => _setReminders(context, ref, on),
                         ),
                       ),
                       row(
@@ -446,6 +456,56 @@ class SettingsScreen extends ConsumerWidget {
     } catch (e) {
       debugPrint('CSV export failed: $e');
       if (context.mounted) toast(context, "Couldn't export your meals.");
+    }
+  }
+
+  static String _remindersSubtitle(AppData data) {
+    final timed = [
+      for (final t in data.visibleTypes)
+        if (t.remindMinute != null)
+          '${t.name} ${fmtTime(minuteKey(t.remindMinute!))}',
+    ];
+    if (!data.remindersOn) {
+      return 'A nudge if a meal isn’t logged by its time';
+    }
+    return timed.isEmpty
+        ? 'Set a “Remind me at” time on a meal type'
+        : timed.join(' · ');
+  }
+
+  Future<void> _setReminders(
+    BuildContext context,
+    WidgetRef ref,
+    bool on,
+  ) async {
+    final notifier = ref.read(appDataProvider.notifier);
+    if (!on) {
+      await notifier.setRemindersOn(false);
+      return;
+    }
+    final bool allowed;
+    try {
+      allowed = await ref.read(reminderSchedulerProvider).requestPermission();
+    } catch (e) {
+      debugPrint('Notification permission request failed: $e');
+      if (context.mounted) toast(context, "Couldn't turn on reminders.");
+      return;
+    }
+    if (!allowed) {
+      if (context.mounted) {
+        toast(
+          context,
+          'Notifications are off for Helpings. Allow them in your phone’s '
+          'settings, then try again.',
+        );
+      }
+      return;
+    }
+    await notifier.setRemindersOn(true);
+    final data = ref.read(appDataProvider).requireValue;
+    if (context.mounted &&
+        data.visibleTypes.every((t) => t.remindMinute == null)) {
+      toast(context, 'Now set a reminder time in Meal types.');
     }
   }
 }

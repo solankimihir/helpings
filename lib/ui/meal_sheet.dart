@@ -18,6 +18,7 @@ Future<void> showMealSheet(
   Meal? editing,
   Meal? template,
   String? date,
+  String? typeId,
 }) {
   return showModalBottomSheet<void>(
     context: context,
@@ -36,7 +37,12 @@ Future<void> showMealSheet(
       padding: EdgeInsets.only(bottom: MediaQuery.viewInsetsOf(ctx).bottom),
       child: FractionallySizedBox(
         heightFactor: .92,
-        child: MealSheet(editing: editing, template: template, date: date),
+        child: MealSheet(
+          editing: editing,
+          template: template,
+          date: date,
+          typeId: typeId,
+        ),
       ),
     ),
   );
@@ -67,7 +73,16 @@ class _DraftRow {
 }
 
 class MealSheet extends ConsumerStatefulWidget {
-  const MealSheet({super.key, this.editing, this.template, this.date});
+  const MealSheet({
+    super.key,
+    this.editing,
+    this.template,
+    this.date,
+    this.typeId,
+  });
+
+  /// Preselected [MealType.id] for a new meal (e.g. from a reminder).
+  final String? typeId;
   final Meal? editing;
 
   /// Copied into a new meal: type, items and notes. Ignored when editing.
@@ -101,6 +116,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
       final t = widget.template;
       _typeId =
           t?.typeId ??
+          (data.typeById(widget.typeId ?? '') != null ? widget.typeId : null) ??
           (guessMealType(data.mealTypes, DateTime.now()) ??
                   data.mealTypes.firstOrNull)
               ?.id ??

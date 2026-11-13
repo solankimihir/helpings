@@ -40,6 +40,7 @@ class _MealTypeSheetState extends ConsumerState<MealTypeSheet> {
     text: widget.editing?.name ?? '',
   );
   late int? _start = widget.editing?.startMinute;
+  late int? _remind = widget.editing?.remindMinute;
   late bool _active = widget.editing?.active ?? true;
   String _error = '';
   bool _saving = false;
@@ -59,8 +60,18 @@ class _MealTypeSheetState extends ConsumerState<MealTypeSheet> {
     }
     final base = widget.editing;
     final type = base == null
-        ? MealType(id: newId(), name: name, startMinute: _start)
-        : base.copyWith(name: name, active: _active, startMinute: () => _start);
+        ? MealType(
+            id: newId(),
+            name: name,
+            startMinute: _start,
+            remindMinute: _remind,
+          )
+        : base.copyWith(
+            name: name,
+            active: _active,
+            startMinute: () => _start,
+            remindMinute: () => _remind,
+          );
     setState(() => _saving = true);
     try {
       final saved = await ref.read(appDataProvider.notifier).saveMealType(type);
@@ -80,12 +91,45 @@ class _MealTypeSheetState extends ConsumerState<MealTypeSheet> {
     });
   }
 
-  Future<void> _pickStart() async {
-    final t = await pickTime(context, minuteKey(_start ?? 12 * 60));
-    if (t == null) return;
-    final (h, m) = parseTime(t);
-    setState(() => _start = h * 60 + m);
-  }
+  /// A time picker field with a Clear button; [value] is minutes after
+  /// midnight, null when not set.
+  Widget _timeField({
+    required String label,
+    required int? value,
+    required ValueChanged<int?> onChanged,
+  }) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      FieldLabel(label),
+      Row(
+        children: [
+          Expanded(
+            child: PickerField(
+              text: value == null ? 'Not set' : fmtTime(minuteKey(value)),
+              semanticLabel: label,
+              fontSize: 16,
+              radius: 14,
+              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
+              onTap: () async {
+                final t = await pickTime(context, minuteKey(value ?? 12 * 60));
+                if (t == null) return;
+                final (h, m) = parseTime(t);
+                onChanged(h * 60 + m);
+              },
+            ),
+          ),
+          if (value != null) ...[
+            const SizedBox(width: 8),
+            Pill(
+              label: 'Clear',
+              style: PillStyle.ghost,
+              onTap: () => onChanged(null),
+            ),
+          ],
+        ],
+      ),
+    ],
+  );
 
   Future<void> _delete() async {
     final type = widget.editing!;
@@ -215,39 +259,28 @@ class _MealTypeSheetState extends ConsumerState<MealTypeSheet> {
                     onSubmitted: (_) => _save(),
                   ),
                   const SizedBox(height: 14),
-                  const FieldLabel('Usually starts at'),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: PickerField(
-                          text: _start == null
-                              ? 'Not set'
-                              : fmtTime(minuteKey(_start!)),
-                          semanticLabel: 'Usually starts at',
-                          fontSize: 16,
-                          radius: 14,
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 14,
-                            vertical: 13,
-                          ),
-                          onTap: _pickStart,
-                        ),
-                      ),
-                      if (_start != null) ...[
-                        const SizedBox(width: 8),
-                        Pill(
-                          label: 'Clear',
-                          style: PillStyle.ghost,
-                          onTap: () => setState(() => _start = null),
-                        ),
-                      ],
-                    ],
+                  _timeField(
+                    label: 'Usually starts at',
+                    value: _start,
+                    onChanged: (v) => setState(() => _start = v),
                   ),
                   const SizedBox(height: 8),
                   Text(
                     'New meals pick the type whose start time passed most '
                     'recently. Without one, this type is only used when you '
                     'tap it.',
+                    style: sans(12.5, color: c.inkA(.45), height: 1.5),
+                  ),
+                  const SizedBox(height: 14),
+                  _timeField(
+                    label: 'Remind me at',
+                    value: _remind,
+                    onChanged: (v) => setState(() => _remind = v),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'A nudge at this time if nothing of this type is '
+                    'logged yet that day. Turn reminders on in Settings.',
                     style: sans(12.5, color: c.inkA(.45), height: 1.5),
                   ),
                   if (editing != null) ...[

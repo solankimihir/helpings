@@ -14,7 +14,7 @@ class AppDatabase {
   final Database db;
   final DatabaseFactory _factory;
 
-  static const version = 3;
+  static const version = 4;
   static const fileName = 'helpings.db';
 
   /// Opens (creating on first launch) the on-device database.
@@ -256,6 +256,12 @@ class AppDatabase {
         )''');
       await db.execute(
         'CREATE INDEX idx_combo_items_combo ON combo_items(combo_id)',
+      );
+    }
+    if (from < 4) {
+      // Reminder time, minutes after midnight; null = no reminder.
+      await db.execute(
+        'ALTER TABLE meal_types ADD COLUMN remind_minute INTEGER',
       );
     }
   }

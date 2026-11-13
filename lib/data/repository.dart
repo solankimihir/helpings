@@ -102,6 +102,7 @@ class Repository {
         'name': type.name,
         'active': type.active ? 1 : 0,
         'start_minute': type.startMinute,
+        'remind_minute': type.remindMinute,
       },
       where: 'id = ?',
       whereArgs: [type.id],
