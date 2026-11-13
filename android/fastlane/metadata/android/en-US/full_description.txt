@@ -20,7 +20,7 @@ YOUR FOOD LIST
 • Starts with everyday foods like roti, dal, rice, idli, poha and tea
 • Set default calories and units (piece, gram, spoon, cup)
 • Hide foods you no longer eat, or delete them — past meals keep their names
-• Changing a default never rewrites meals you already saved
+• Give a food calories later and Helpings offers to fill in past meals that had none; nothing changes without asking
 
 HISTORY AND TRENDS
 • Swipe between days on the home screen, or jump to any date

@@ -216,6 +216,29 @@ class MealEntry {
   );
 }
 
+/// Calories for [qty] [unit] of a food whose default is [cal] per
+/// [defUnit]. A missing quantity counts as 1, and a missing unit on either
+/// side counts as matching. Null when there's no default or the units differ.
+double? scaledCalories({
+  double? cal,
+  FoodUnit? defUnit,
+  double? qty,
+  FoodUnit? unit,
+}) {
+  if (cal == null) return null;
+  if (defUnit != null && unit != null && defUnit != unit) return null;
+  return cal * (qty ?? 1);
+}
+
+/// [scaledCalories] for a line of [item] at its current default.
+double? itemCalories(FoodItem item, double? qty, FoodUnit? unit) =>
+    scaledCalories(
+      cal: item.defaultCalories,
+      defUnit: item.defaultUnit,
+      qty: qty,
+      unit: unit,
+    );
+
 @immutable
 class Meal {
   const Meal({

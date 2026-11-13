@@ -4,6 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:helpings/data/database.dart';
 import 'package:helpings/data/models.dart';
 import 'package:helpings/data/repository.dart';
+import 'package:helpings/state/app_state.dart';
 import 'package:material_ui/material_ui.dart';
 import 'package:sqflite_common_ffi/sqflite_ffi.dart';
 
@@ -14,10 +15,24 @@ const _usual = Combo(
   id: 'c1',
   name: 'Usual breakfast',
   items: [
-    MealEntry(id: 'l1', nameSnapshot: 'Roti', qty: 2, calories: 200),
-    MealEntry(id: 'l2', nameSnapshot: 'Tea', qty: 1, calories: 90),
+    MealEntry(id: 'l1', nameSnapshot: 'Roti', qty: 2),
+    MealEntry(id: 'l2', nameSnapshot: 'Tea', qty: 1),
   ],
 );
+
+/// [_usual], linked to the seeded Roti (100 kcal) and Tea (90 kcal).
+Future<Combo> _usualLinked(Repository r) async {
+  final items = await r.items();
+  String id(String name) => items.firstWhere((i) => i.name == name).id;
+  return Combo(
+    id: 'c1',
+    name: 'Usual breakfast',
+    items: [
+      MealEntry(id: 'l1', itemId: id('Roti'), nameSnapshot: 'Roti', qty: 2),
+      MealEntry(id: 'l2', itemId: id('Tea'), nameSnapshot: 'Tea', qty: 1),
+    ],
+  );
+}
 
 void main() {
   late Directory dir;
@@ -50,6 +65,19 @@ void main() {
     expect(await r.meals(), hasLength(2));
   });
 
+  test('upgrading to v5 clears calories stored on combo lines', () async {
+    final path = '${dir.path}/v4.db';
+    var db = await AppDatabase.open(factory: schemaFactory, path: path);
+    await Repository(db).saveCombo(_usual);
+    await db.db.execute('UPDATE combo_items SET calories = 90');
+    await db.db.setVersion(4);
+    await db.close();
+    db = await AppDatabase.open(factory: schemaFactory, path: path);
+    addTearDown(db.close);
+    final lines = (await Repository(db).combos()).single.items;
+    expect(lines.map((e) => e.calories), [null, null]);
+  });
+
   group('repository', () {
     late Repository r;
     setUp(() async {
@@ -77,6 +105,47 @@ void main() {
 
       await r.deleteCombo('c1');
       expect(await r.combos(), isEmpty);
+    });
+
+    test('combos store no calories; they come from the food list', () async {
+      await r.saveCombo(
+        Combo(
+          id: 'c',
+          name: 'Typed',
+          items: [
+            const MealEntry(id: 'l', nameSnapshot: 'Roti', calories: 999),
+          ],
+        ),
+      );
+      expect((await r.combos()).single.items.single.calories, isNull);
+
+      final combo = await _usualLinked(r);
+      final items = await r.items();
+      AppData data(List<FoodItem> items) =>
+          AppData(items: items, meals: const [], defaultUnit: FoodUnit.piece);
+      expect(data(items).comboLines(combo).map((e) => e.calories), [
+        200.0,
+        90.0,
+      ]);
+      // A later change to Roti's default shows up the next time it's used.
+      final roti = items.firstWhere((i) => i.name == 'Roti');
+      await r.saveItem(roti.copyWith(defaultCalories: () => 120));
+      expect(data(await r.items()).comboLines(combo).first.calories, 240);
+      // A line in another unit, or of a deleted food, has no calories.
+      final cups = Combo(
+        id: 'x',
+        name: 'x',
+        items: [
+          MealEntry(
+            id: 'a',
+            itemId: roti.id,
+            nameSnapshot: 'Roti',
+            unit: FoodUnit.gram,
+          ),
+          const MealEntry(id: 'b', itemId: 'gone', nameSnapshot: 'Gone'),
+        ],
+      );
+      expect(data(items).comboLines(cups).map((e) => e.calories), [null, null]);
     });
 
     test('deleting a food item keeps its name in the combo', () async {
@@ -165,7 +234,10 @@ void main() {
       tester.view.physicalSize = const Size(400, 1400);
       tester.view.devicePixelRatio = 1;
       addTearDown(tester.view.reset);
-      await pumpApp(tester, seed: (r) => r.saveCombo(_usual));
+      await pumpApp(
+        tester,
+        seed: (r) async => r.saveCombo(await _usualLinked(r)),
+      );
       await tester.tap(find.text('Settings'));
       await tester.pumpAndSettle();
       await tester.tap(find.text('Combos'));

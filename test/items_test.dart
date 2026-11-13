@@ -1,4 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:helpings/data/format.dart';
+import 'package:helpings/data/models.dart';
+import 'package:helpings/data/repository.dart';
 import 'package:helpings/data/seed.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -61,5 +64,74 @@ void main() {
     await tester.tap(find.widgetWithText(TextButton, 'Delete'));
     await tester.pumpAndSettle();
     expect(find.text('0 ITEMS'), findsOneWidget);
+  });
+
+  group('giving a food calories later', () {
+    const toast = FoodItem(
+      id: 'toast',
+      name: 'Toast Sandwich',
+      defaultUnit: FoodUnit.piece,
+    );
+    Future<void> seed(Repository r) async {
+      await r.saveItem(toast);
+      await r.saveMeal(
+        Meal(
+          id: 'm',
+          typeId: 'lunch',
+          date: todayKey(),
+          time: '13:00',
+          entries: const [
+            MealEntry(
+              id: 'e',
+              itemId: 'toast',
+              nameSnapshot: 'Toast Sandwich',
+              qty: 2,
+              unit: FoodUnit.piece,
+            ),
+          ],
+        ),
+      );
+    }
+
+    Future<double?> logged(WidgetTester tester, db) async =>
+        (await tester.runAsync(() => Repository(db).meals()))!
+            .single
+            .entries
+            .single
+            .calories;
+
+    Future<void> setCalories(WidgetTester tester) async {
+      await tester.tap(find.text('Meal Items').last);
+      await tester.pumpAndSettle();
+      await tester.enterText(_search(), 'Toast');
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Edit'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.widgetWithText(TextField, 'optional'), '150');
+      await tester.tap(find.text('Save').last);
+      await tester.pumpAndSettle();
+      expect(find.text('Update past meals?'), findsOneWidget);
+      expect(
+        find.text('Fill in 1 logged line that has no calories'),
+        findsOneWidget,
+      );
+    }
+
+    testWidgets('offers to fill in past meals', (tester) async {
+      final db = await pumpApp(tester, seed: seed);
+      await setCalories(tester);
+      await tester.tap(find.text('Update'));
+      await tester.pumpAndSettle();
+      expect(find.text('Update past meals?'), findsNothing);
+      expect(await logged(tester, db), 300); // 2 pieces × 150
+    });
+
+    testWidgets('leave as is keeps them blank', (tester) async {
+      final db = await pumpApp(tester, seed: seed);
+      await setCalories(tester);
+      await tester.tap(find.text('Leave as is'));
+      await tester.pumpAndSettle();
+      expect(await logged(tester, db), isNull);
+    });
   });
 }

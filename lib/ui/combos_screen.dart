@@ -134,6 +134,7 @@ class _ComboRow extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final c = context.c;
+    final data = ref.watch(appDataProvider).requireValue;
     final summary = [
       for (final e in combo.items) lineText(e.nameSnapshot, e.qty, e.unit),
     ].join(' · ');
@@ -152,7 +153,7 @@ class _ComboRow extends ConsumerWidget {
                   style: sans(15.5, weight: FontWeight.w600, color: c.ink),
                 ),
                 Text(
-                  '$summary · ${calLabel(MealTotals.of(combo.items))}',
+                  '$summary · ${calLabel(MealTotals.of(data.comboLines(combo)))}',
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
                   style: sans(12.5, color: c.inkA(.45)),

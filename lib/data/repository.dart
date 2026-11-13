@@ -15,6 +15,30 @@ class DuplicateNameException implements Exception {
 }
 
 /// All reads and writes go through here.
+/// Logged lines a food's new default calories could update.
+class PastLines {
+  const PastLines({
+    this.fillable = const [],
+    this.stale = const [],
+    this.otherUnit = 0,
+    this.oldCalories,
+  });
+
+  /// Lines with no calories that the new default can fill in.
+  final List<String> fillable;
+
+  /// Lines that still hold the old default (scaled by quantity).
+  final List<String> stale;
+
+  /// Lines with no calories in a unit other than the food's default.
+  final int otherUnit;
+
+  /// The food's previous default.
+  final double? oldCalories;
+
+  bool get isEmpty => fillable.isEmpty && stale.isEmpty;
+}
+
 class Repository {
   Repository(this._appDb);
 
@@ -75,6 +99,78 @@ class Repository {
   }
 
   Future<int> restoreDefaultItems() => insertDefaultItems(_db);
+
+  /// Logged lines of [after] that a change from [before]'s default calories
+  /// could update.
+  Future<PastLines> pastLines(FoodItem before, FoodItem after) async {
+    final rows = await _db.query(
+      'meal_entries',
+      columns: ['id', 'qty', 'unit', 'calories'],
+      where: 'item_id = ?',
+      whereArgs: [after.id],
+    );
+    final fillable = <String>[];
+    final stale = <String>[];
+    var otherUnit = 0;
+    final checkStale =
+        before.defaultCalories != null &&
+        after.defaultCalories != null &&
+        before.defaultCalories != after.defaultCalories &&
+        before.defaultUnit == after.defaultUnit;
+    for (final r in rows) {
+      final qty = (r['qty'] as num?)?.toDouble();
+      final unit = FoodUnit.tryParse(r['unit'] as String?);
+      final cal = (r['calories'] as num?)?.toDouble();
+      final next = itemCalories(after, qty, unit);
+      if (cal == null) {
+        if (next != null) {
+          fillable.add(r['id'] as String);
+        } else if (after.defaultCalories != null) {
+          otherUnit++;
+        }
+      } else if (checkStale && next != null) {
+        final old = itemCalories(before, qty, unit);
+        if (old != null && (cal - old).abs() < 0.001) {
+          stale.add(r['id'] as String);
+        }
+      }
+    }
+    return PastLines(
+      fillable: fillable,
+      stale: stale,
+      otherUnit: otherUnit,
+      oldCalories: before.defaultCalories,
+    );
+  }
+
+  /// Sets each of [ids] (lines of [item]) to [item]'s current default,
+  /// scaled by the line's quantity. Returns how many changed.
+  Future<int> applyPastLines(FoodItem item, Iterable<String> ids) =>
+      _db.transaction((txn) async {
+        var n = 0;
+        for (final id in ids) {
+          final rows = await txn.query(
+            'meal_entries',
+            columns: ['qty', 'unit'],
+            where: 'id = ? AND item_id = ?',
+            whereArgs: [id, item.id],
+          );
+          if (rows.isEmpty) continue;
+          final cal = itemCalories(
+            item,
+            (rows.first['qty'] as num?)?.toDouble(),
+            FoodUnit.tryParse(rows.first['unit'] as String?),
+          );
+          if (cal == null) continue;
+          n += await txn.update(
+            'meal_entries',
+            {'calories': cal},
+            where: 'id = ?',
+            whereArgs: [id],
+          );
+        }
+        return n;
+      });
 
   // ---- Meal types ---------------------------------------------------------
 
@@ -219,7 +315,10 @@ class Repository {
       whereArgs: [combo.id],
     );
     for (var i = 0; i < combo.items.length; i++) {
-      final row = combo.items[i].toRow(combo.id, i)..remove('meal_id');
+      // Calories come from the food list when the combo is used.
+      final row = combo.items[i].toRow(combo.id, i)
+        ..remove('meal_id')
+        ..['calories'] = null;
       await txn.insert('combo_items', {...row, 'combo_id': combo.id});
     }
   });

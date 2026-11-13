@@ -40,11 +40,16 @@ class DraftLineCard extends StatelessWidget {
     required this.row,
     required this.onRemove,
     required this.onUnit,
+    this.fixedCalories,
   });
 
   final DraftLine row;
   final VoidCallback onRemove;
   final ValueChanged<FoodUnit?> onUnit;
+
+  /// When set, calories aren't editable: shows this text (worked out from
+  /// the line's quantity) instead of the calorie field. Used by combos.
+  final String Function()? fixedCalories;
 
   @override
   Widget build(BuildContext context) {
@@ -118,17 +123,32 @@ class DraftLineCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const FieldLabel('Calories', small: true),
-                    AppTextField(
-                      controller: row.cal,
-                      hint: 'optional',
-                      radius: 11,
-                      padding: fieldPad,
-                      keyboardType: const TextInputType.numberWithOptions(
-                        decimal: true,
+                    if (fixedCalories case final fixed?)
+                      ListenableBuilder(
+                        listenable: row.qty,
+                        builder: (context, _) => Padding(
+                          padding: fieldPad.add(
+                            const EdgeInsets.symmetric(vertical: 1),
+                          ),
+                          child: Text(
+                            fixed(),
+                            maxLines: 2,
+                            style: sans(14, color: c.inkA(.6)),
+                          ),
+                        ),
+                      )
+                    else
+                      AppTextField(
+                        controller: row.cal,
+                        hint: 'optional',
+                        radius: 11,
+                        padding: fieldPad,
+                        keyboardType: const TextInputType.numberWithOptions(
+                          decimal: true,
+                        ),
+                        inputFormatters: decimalOnly,
+                        semanticLabel: 'Calories',
                       ),
-                      inputFormatters: decimalOnly,
-                      semanticLabel: 'Calories',
-                    ),
                   ],
                 ),
               ),

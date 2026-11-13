@@ -20,7 +20,7 @@ is lost, Play can reset it, but it takes days and needs support.
 ## 1. Host the privacy policy
 
 Upload `docs/privacy-policy.html` so it's reachable at
-**https://mihirsolanki.in/helpings/privacy** (or any public URL on your domain).
+**https://helpings.mihirsolanki.in/privacy** (or any public URL on your domain).
 Make sure `support@mihirsolanki.in` receives mail.
 
 ## 2. Create the app in Play Console
@@ -36,7 +36,7 @@ Play Console → **Create app**
 
 | Section | Answer |
 |---|---|
-| Privacy policy | `https://mihirsolanki.in/helpings/privacy` |
+| Privacy policy | `https://helpings.mihirsolanki.in/privacy` |
 | App access | All functionality is available without special access |
 | Ads | **No**, my app does not contain ads |
 | Content rating | Start questionnaire → email `support@mihirsolanki.in` → category **All Other App Types** → answer **No** to every question (no violence, sexuality, language, controlled substances, gambling, user interaction/sharing, location sharing, digital purchases). Result is typically *Everyone / PEGI 3*. |

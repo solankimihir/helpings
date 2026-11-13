@@ -14,7 +14,7 @@ class AppDatabase {
   final Database db;
   final DatabaseFactory _factory;
 
-  static const version = 4;
+  static const version = 5;
   static const fileName = 'helpings.db';
 
   /// Opens (creating on first launch) the on-device database.
@@ -263,6 +263,11 @@ class AppDatabase {
       await db.execute(
         'ALTER TABLE meal_types ADD COLUMN remind_minute INTEGER',
       );
+    }
+    if (from < 5) {
+      // Combo lines take calories from the food list when added to a meal;
+      // the column stays but is no longer used.
+      await db.execute('UPDATE combo_items SET calories = NULL');
     }
   }
 

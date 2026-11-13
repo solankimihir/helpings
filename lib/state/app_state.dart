@@ -79,6 +79,26 @@ class AppData {
   /// Current name of the food if it still exists, else the logged name.
   String displayName(MealEntry e) => itemById(e.itemId)?.name ?? e.nameSnapshot;
 
+  /// [combo]'s lines with calories from each food's current default,
+  /// scaled by quantity. Null where the food is gone, has no default, or
+  /// the line is in a different unit.
+  List<MealEntry> comboLines(Combo combo) => [
+    for (final e in combo.items) withItemCalories(e),
+  ];
+
+  /// [e] with calories from its food's current default, as in [comboLines].
+  MealEntry withItemCalories(MealEntry e) {
+    final item = itemById(e.itemId);
+    return MealEntry(
+      id: e.id,
+      itemId: e.itemId,
+      nameSnapshot: e.nameSnapshot,
+      qty: e.qty,
+      unit: e.unit,
+      calories: item == null ? null : itemCalories(item, e.qty, e.unit),
+    );
+  }
+
   Meal? mealById(String id) {
     for (final m in meals) {
       if (m.id == id) return m;
@@ -185,6 +205,17 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
   Future<FoodItem> saveItem(FoodItem item) async {
     await _mutate((r) => r.saveItem(item));
     return item;
+  }
+
+  /// Logged lines a change from [before] to [after] could update.
+  Future<PastLines> pastLines(FoodItem before, FoodItem after) async =>
+      (await _repo).pastLines(before, after);
+
+  /// Sets [ids] to [item]'s default calories. Returns how many changed.
+  Future<int> applyPastLines(FoodItem item, Iterable<String> ids) async {
+    var n = 0;
+    await _mutate((r) async => n = await r.applyPastLines(item, ids));
+    return n;
   }
 
   Future<void> setItemActive(String id, bool active) =>

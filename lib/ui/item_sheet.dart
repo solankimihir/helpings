@@ -90,8 +90,12 @@ class _ItemSheetState extends ConsumerState<ItemSheet> {
             defaultUnit: () => _unit,
           );
     setState(() => _saving = true);
+    final notifier = ref.read(appDataProvider.notifier);
     try {
-      final saved = await ref.read(appDataProvider.notifier).saveItem(item);
+      final saved = await notifier.saveItem(item);
+      if (base != null && cal != null && mounted) {
+        await _offerPastUpdate(base, saved);
+      }
       if (mounted) Navigator.pop(context, saved);
     } on DuplicateNameException catch (e) {
       if (mounted) {
@@ -100,6 +104,31 @@ class _ItemSheetState extends ConsumerState<ItemSheet> {
           _error = e.toString();
         });
       }
+    }
+  }
+
+  /// Past meals keep their own calories; offer to fill in the blanks (and,
+  /// if asked, lines still at the old default) from the new default.
+  Future<void> _offerPastUpdate(FoodItem before, FoodItem after) async {
+    final notifier = ref.read(appDataProvider.notifier);
+    final past = await notifier.pastLines(before, after);
+    if (past.isEmpty || !mounted) return;
+    final choice = await askUpdatePastLines(
+      context,
+      food: after.name,
+      calories: after.defaultCalories!,
+      fillable: past.fillable.length,
+      stale: past.stale.length,
+      otherUnit: past.otherUnit,
+      oldCalories: past.oldCalories,
+    );
+    if (choice == null || !mounted) return;
+    final n = await notifier.applyPastLines(after, [
+      if (choice.fill) ...past.fillable,
+      if (choice.stale) ...past.stale,
+    ]);
+    if (mounted && n > 0) {
+      toast(context, 'Updated ${plural(n, 'logged line')}');
     }
   }
 

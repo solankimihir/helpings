@@ -409,7 +409,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                         onTap: () {
                           setState(() {
                             _error = '';
-                            _addEntries(combo.items, data);
+                            _addEntries(data.comboLines(combo), data);
                           });
                           _revealPicker();
                         },

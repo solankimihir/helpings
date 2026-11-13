@@ -153,14 +153,28 @@ class _ComboSheetState extends ConsumerState<ComboSheet> {
     nav.pop();
   }
 
-  /// What's entered so far; a value that isn't a number counts as missing.
-  MealTotals _total() => MealTotals.of([
+  /// Calories for [r] from its food's current default; null if the food is
+  /// gone, has no default, or the line is in another unit.
+  double? _calories(DraftLine r, AppData data) {
+    final item = data.itemById(r.itemId);
+    if (item == null) return null;
+    final q = r.qty.text.trim();
+    return itemCalories(item, q.isEmpty ? null : parseNum(q), r.unit);
+  }
+
+  String _caloriesText(DraftLine r, AppData data) {
+    final cal = _calories(r, data);
+    if (cal != null) return '${fmtN(cal)} kcal';
+    final item = data.itemById(r.itemId);
+    if (item?.defaultCalories != null && item?.defaultUnit != null) {
+      return 'Default is per ${item!.defaultUnit!.label.toLowerCase()}';
+    }
+    return 'No default';
+  }
+
+  MealTotals _total(AppData data) => MealTotals.of([
     for (final r in _rows)
-      MealEntry(
-        id: r.rid,
-        nameSnapshot: r.name,
-        calories: r.cal.text.trim().isEmpty ? null : parseNum(r.cal.text),
-      ),
+      MealEntry(id: r.rid, nameSnapshot: r.name, calories: _calories(r, data)),
   ]);
 
   @override
@@ -216,10 +230,10 @@ class _ComboSheetState extends ConsumerState<ComboSheet> {
                         // Follows the calorie fields as they're typed in.
                         child: ListenableBuilder(
                           listenable: Listenable.merge([
-                            for (final r in _rows) r.cal,
+                            for (final r in _rows) r.qty,
                           ]),
                           builder: (context, _) => Text(
-                            calLabel(_total()),
+                            calLabel(_total(data)),
                             style: sans(
                               13,
                               weight: FontWeight.w600,
@@ -249,6 +263,7 @@ class _ComboSheetState extends ConsumerState<ComboSheet> {
                     row: r,
                     onRemove: () => _remove(r),
                     onUnit: (u) => setState(() => r.unit = u),
+                    fixedCalories: () => _caloriesText(r, data),
                   ),
                 ),
               const SizedBox(height: 6),
@@ -265,8 +280,8 @@ class _ComboSheetState extends ConsumerState<ComboSheet> {
               ),
               const SizedBox(height: 12),
               Text(
-                'Adding a combo to a meal copies these quantities and '
-                'calories; you can still change them in the meal.',
+                'Calories come from each food’s default when you add the '
+                'combo to a meal; you can still change them in the meal.',
                 style: sans(12.5, color: c.inkA(.45), height: 1.5),
               ),
               if (editing != null) ...[

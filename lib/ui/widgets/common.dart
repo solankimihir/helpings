@@ -826,6 +826,121 @@ Future<bool> confirm(
   return r ?? false;
 }
 
+/// Which past lines to update after a food's default calories changed.
+/// Null if the user leaves them as they are.
+Future<({bool fill, bool stale})?> askUpdatePastLines(
+  BuildContext context, {
+  required String food,
+  required double calories,
+  required int fillable,
+  required int stale,
+  required int otherUnit,
+  double? oldCalories,
+}) {
+  var fill = fillable > 0;
+  var fixStale = false;
+  return showAdaptiveDialog<({bool fill, bool stale})>(
+    context: context,
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) {
+        final c = ctx.c;
+        Widget option({
+          required bool value,
+          required ValueChanged<bool> onChanged,
+          required String label,
+          String? note,
+        }) => Material(
+          type: MaterialType.transparency,
+          child: InkWell(
+            borderRadius: BorderRadius.circular(10),
+            onTap: () => setState(() => onChanged(!value)),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Checkbox.adaptive(
+                    value: value,
+                    onChanged: (v) => setState(() => onChanged(v ?? false)),
+                  ),
+                  const SizedBox(width: 4),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(label, style: sans(14.5, color: c.ink)),
+                          if (note != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2),
+                              child: Text(
+                                note,
+                                style: sans(12.5, color: c.inkA(.55)),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+        final extra = otherUnit > 0
+            ? '${plural(otherUnit, 'more is', 'more are')} in a different '
+                  'unit and will stay blank.'
+            : null;
+        return AlertDialog.adaptive(
+          title: const Text('Update past meals?'),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '$food is now ${fmtN(calories)} kcal. Calories are '
+                'multiplied by each line’s quantity.',
+                style: sans(14, color: c.inkA(.7), height: 1.4),
+              ),
+              const SizedBox(height: 8),
+              if (fillable > 0)
+                option(
+                  value: fill,
+                  onChanged: (v) => fill = v,
+                  label:
+                      'Fill in ${plural(fillable, 'logged line')} that '
+                      '${fillable == 1 ? 'has' : 'have'} no calories',
+                  note: extra,
+                ),
+              if (stale > 0)
+                option(
+                  value: fixStale,
+                  onChanged: (v) => fixStale = v,
+                  label:
+                      'Update ${plural(stale, 'logged line')} still at the '
+                      'old ${fmtN(oldCalories)} kcal',
+                ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(ctx),
+              child: const Text('Leave as is'),
+            ),
+            TextButton(
+              onPressed: fill || fixStale
+                  ? () => Navigator.pop(ctx, (fill: fill, stale: fixStale))
+                  : null,
+              child: const Text('Update'),
+            ),
+          ],
+        );
+      },
+    ),
+  );
+}
+
 void toast(BuildContext context, String message) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()

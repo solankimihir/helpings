@@ -42,6 +42,118 @@ void main() {
     ],
   );
 
+  test('scaledCalories multiplies by quantity and needs the same unit', () {
+    expect(scaledCalories(cal: 150), 150);
+    expect(scaledCalories(cal: 150, qty: 2), 300);
+    expect(
+      scaledCalories(
+        cal: 150,
+        defUnit: FoodUnit.piece,
+        qty: 2,
+        unit: FoodUnit.piece,
+      ),
+      300,
+    );
+    expect(
+      scaledCalories(cal: 150, defUnit: FoodUnit.piece, unit: FoodUnit.gram),
+      isNull,
+    );
+    expect(scaledCalories(defUnit: FoodUnit.piece, qty: 2), isNull);
+  });
+
+  group('past lines after a food\'s default changes', () {
+    const blank = FoodItem(
+      id: 'toast',
+      name: 'Toast Sandwich',
+      defaultUnit: FoodUnit.piece,
+    );
+    MealEntry line(String id, {double? qty, FoodUnit? unit, double? cal}) =>
+        MealEntry(
+          id: id,
+          itemId: 'toast',
+          nameSnapshot: 'Toast Sandwich',
+          qty: qty,
+          unit: unit,
+          calories: cal,
+        );
+    Future<Map<String, double?>> calories() async => {
+      for (final e in (await repo.meals()).single.entries) e.id: e.calories,
+    };
+
+    setUp(() async {
+      await repo.saveItem(blank);
+      await repo.saveMeal(
+        Meal(
+          id: 'm',
+          typeId: 'lunch',
+          date: '2026-11-12',
+          time: '13:00',
+          entries: [
+            line('one', qty: 1, unit: FoodUnit.piece),
+            line('two', qty: 2, unit: FoodUnit.piece),
+            line('grams', qty: 50, unit: FoodUnit.gram),
+            line('typed', qty: 1, unit: FoodUnit.piece, cal: 120),
+            line('bare'),
+          ],
+        ),
+      );
+    });
+
+    test(
+      'blank lines fill in, scaled; typed and other-unit lines stay',
+      () async {
+        final v150 = blank.copyWith(defaultCalories: () => 150);
+        await repo.saveItem(v150);
+        final past = await repo.pastLines(blank, v150);
+        expect(past.fillable, unorderedEquals(['one', 'two', 'bare']));
+        expect(past.otherUnit, 1);
+        expect(past.stale, isEmpty);
+
+        expect(await repo.applyPastLines(v150, past.fillable), 3);
+        expect(await calories(), {
+          'one': 150,
+          'two': 300,
+          'grams': null,
+          'typed': 120,
+          'bare': 150,
+        });
+
+        // Lines still at the old default can be moved to the new one; a
+        // typed value that doesn't match stays.
+        final v180 = v150.copyWith(defaultCalories: () => 180);
+        final next = await repo.pastLines(v150, v180);
+        expect(next.fillable, isEmpty);
+        expect(next.stale, unorderedEquals(['one', 'two', 'bare']));
+        expect(next.oldCalories, 150);
+        await repo.applyPastLines(v180, next.stale);
+        expect(await calories(), {
+          'one': 180,
+          'two': 360,
+          'grams': null,
+          'typed': 120,
+          'bare': 180,
+        });
+
+        // Clearing the default never clears past lines; a unit change never
+        // offers to update old values.
+        expect(
+          (await repo.pastLines(
+            v180,
+            v180.copyWith(defaultCalories: () => null),
+          )).isEmpty,
+          isTrue,
+        );
+        final grams = v180.copyWith(
+          defaultCalories: () => 2,
+          defaultUnit: () => FoodUnit.gram,
+        );
+        final byGram = await repo.pastLines(v180, grams);
+        expect(byGram.stale, isEmpty);
+        expect(byGram.fillable, ['grams']);
+      },
+    );
+  });
+
   test('first launch seeds default food items only', () async {
     final items = await repo.items();
     expect(items.length, defaultItems.length);
