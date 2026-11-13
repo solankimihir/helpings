@@ -13,8 +13,8 @@
   <img alt="Built with Flutter" src="https://img.shields.io/badge/built%20with-Flutter-2E854D">
 </p>
 
-Write down what you ate in about ten seconds, see today's calories at a
-glance, and look back on any day.
+Log what you ate quickly and easily, see today's calories at a glance, and
+look back on any day.
 
 Calories are never estimated. Totals add up only what you enter, and when a
 line has no calories the total shows a `+` (for example `210+ kcal`) and says
@@ -125,8 +125,7 @@ Backups from older versions are migrated on restore.
 
 Helpings is developed with the help of AI: Anthropic's Claude (via Claude
 Code) is used to write and review code, tests and documentation. Every change
-is directed, reviewed and tested on a real device by the maintainer, who is
-responsible for the app.
+is directed, reviewed and tested on a real device by the maintainer.
 
 ## License
 
