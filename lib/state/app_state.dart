@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:material_ui/material_ui.dart' show ThemeMode;
@@ -15,7 +17,10 @@ String newId() => _uuid.v4();
 
 /// Overridden in tests with an in-memory database.
 final databaseProvider = FutureProvider<AppDatabase>((ref) async {
-  final db = await AppDatabase.open();
+  final db = await AppDatabase.open(
+    beforeUpgrade: (u) =>
+        backupBeforeUpgrade(ref.read(backupFolderProvider), u),
+  );
   ref.onDispose(db.close);
   return db;
 });
@@ -31,6 +36,7 @@ class AppData {
     required this.items,
     required this.meals,
     required this.defaultUnit,
+    this.units = FoodUnit.builtIns,
     this.mealTypes = const [],
     this.combos = const [],
     this.themeMode = ThemeMode.system,
@@ -44,7 +50,23 @@ class AppData {
 
   /// Oldest first.
   final List<Meal> meals;
+
+  /// Pre-filled for new foods. Always a visible unit when there is one.
   final FoodUnit defaultUnit;
+
+  /// Every unit, hidden ones included, in display order.
+  final List<FoodUnit> units;
+
+  /// Units offered in pickers.
+  List<FoodUnit> get visibleUnits => units.where((u) => u.active).toList();
+
+  /// Units to offer for a field currently set to [current]: the visible
+  /// ones, plus [current] if it's hidden so the field can still show it.
+  List<FoodUnit> unitsFor(FoodUnit? current) {
+    final visible = visibleUnits;
+    if (current == null || visible.contains(current)) return visible;
+    return [...visible, current];
+  }
 
   /// Every meal type, hidden ones included, in display order.
   final List<MealType> mealTypes;
@@ -107,6 +129,32 @@ class AppData {
   }
 }
 
+/// Saves [u]'s copy of the database before it's upgraded: to the daily
+/// backup folder if one is set, otherwise (or if that fails) to the app's
+/// own folder. Returns where it went, or null if nowhere could take it.
+Future<String?> backupBeforeUpgrade(
+  BackupFolder folder,
+  PendingUpgrade u, [
+  DateTime? now,
+]) async {
+  final name = preUpgradeFileName(now ?? DateTime.now(), u.from);
+  final token = u.settings[_kAutoFolder];
+  if (token != null) {
+    try {
+      await folder.write(token, name, u.bytes);
+      return '${u.settings[_kAutoFolderName] ?? 'backup folder'}/$name';
+    } catch (e) {
+      debugPrint('Pre-upgrade copy to the backup folder failed: $e');
+    }
+  }
+  final dir = await folder.appFolder();
+  if (dir == null) return null;
+  final file = File('$dir/$name');
+  await file.parent.create(recursive: true);
+  await file.writeAsBytes(u.bytes, flush: true);
+  return file.path;
+}
+
 @immutable
 class AutoBackupStatus {
   const AutoBackupStatus({
@@ -166,7 +214,10 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       repo.settings(),
       repo.mealTypes(),
       repo.combos(),
+      repo.units(),
     ]);
+    final units = results[5] as List<FoodUnit>;
+    final visible = units.where((u) => u.active);
     final settings = results[2] as Map<String, String?>;
     final folder = settings[_kAutoFolder];
     return AppData(
@@ -174,7 +225,11 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       meals: results[1] as List<Meal>,
       mealTypes: results[3] as List<MealType>,
       combos: results[4] as List<Combo>,
-      defaultUnit: FoodUnit.tryParse(settings[_kDefaultUnit]) ?? FoodUnit.piece,
+      units: units,
+      defaultUnit:
+          visible.where((u) => u.id == settings[_kDefaultUnit]).firstOrNull ??
+          visible.firstOrNull ??
+          FoodUnit.piece,
       themeMode: _parseThemeMode(settings[_kThemeMode]),
       lastBackupAt: DateTime.tryParse(settings[_kLastBackup] ?? ''),
       remindersOn: settings[_kRemindersOn] == '1',
@@ -281,7 +336,34 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       _mutate((r) => r.setSetting(_kRemindersOn, on ? '1' : null));
 
   Future<void> setDefaultUnit(FoodUnit u) =>
-      _mutate((r) => r.setSetting(_kDefaultUnit, u.name));
+      _mutate((r) => r.setSetting(_kDefaultUnit, u.id));
+
+  // ---- Units --------------------------------------------------------------
+
+  /// Throws [DuplicateNameException] or [LastUnitException]. Returns the
+  /// saved unit.
+  Future<FoodUnit> saveUnit(FoodUnit unit) async {
+    if (!unit.active) _checkNotLastVisibleUnit(unit.id);
+    await _mutate((r) => r.saveUnit(unit));
+    return unit;
+  }
+
+  Future<void> reorderUnits(List<String> ids) =>
+      _mutate((r) => r.reorderUnits(ids));
+
+  Future<int> unitUsageCount(String id) async =>
+      (await _repo).unitUsageCount(id);
+
+  /// Deletes an unused custom unit. Throws [StateError] otherwise.
+  Future<void> deleteUnit(String id) {
+    _checkNotLastVisibleUnit(id);
+    return _mutate((r) => r.deleteUnit(id));
+  }
+
+  void _checkNotLastVisibleUnit(String id) {
+    final others = state.requireValue.visibleUnits.where((u) => u.id != id);
+    if (others.isEmpty) throw const LastUnitException();
+  }
 
   Future<void> setThemeMode(ThemeMode m) =>
       _mutate((r) => r.setSetting(_kThemeMode, m.name));
@@ -415,4 +497,11 @@ class LastMealTypeException implements Exception {
   const LastMealTypeException();
   @override
   String toString() => 'Keep at least one meal type visible.';
+}
+
+/// Hiding or deleting would leave no unit to pick.
+class LastUnitException implements Exception {
+  const LastUnitException();
+  @override
+  String toString() => 'Keep at least one unit visible.';
 }

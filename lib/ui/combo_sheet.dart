@@ -263,6 +263,7 @@ class _ComboSheetState extends ConsumerState<ComboSheet> {
                     row: r,
                     onRemove: () => _remove(r),
                     onUnit: (u) => setState(() => r.unit = u),
+                    units: data.unitsFor(r.unit),
                     fixedCalories: () => _caloriesText(r, data),
                   ),
                 ),

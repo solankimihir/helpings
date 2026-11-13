@@ -392,6 +392,7 @@ class _MealSheetState extends ConsumerState<MealSheet> {
                     row: r,
                     onRemove: () => _removeRow(r),
                     onUnit: (u) => setState(() => r.unit = u),
+                    units: data.unitsFor(r.unit),
                   ),
                 ),
               if (data.combos.isNotEmpty) ...[

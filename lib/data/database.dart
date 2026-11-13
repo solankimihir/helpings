@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show debugPrint;
 import 'package:path/path.dart' as p;
 import 'package:sqflite/sqflite.dart';
 
@@ -14,16 +15,31 @@ class AppDatabase {
   final Database db;
   final DatabaseFactory _factory;
 
-  static const version = 5;
+  static const version = 6;
   static const fileName = 'helpings.db';
 
   /// Opens (creating on first launch) the on-device database.
+  ///
+  /// When an existing database is about to be upgraded to a newer schema,
+  /// [beforeUpgrade] first gets a copy of it as it is. An error there is
+  /// logged and the upgrade goes ahead, so the app still opens.
   static Future<AppDatabase> open({
     DatabaseFactory? factory,
     String? path,
+    Future<void> Function(PendingUpgrade upgrade)? beforeUpgrade,
   }) async {
     final f = factory ?? databaseFactory;
     final dbPath = path ?? p.join(await f.getDatabasesPath(), fileName);
+    if (beforeUpgrade != null) {
+      final pending = await _pendingUpgrade(f, dbPath);
+      if (pending != null) {
+        try {
+          await beforeUpgrade(pending);
+        } catch (e) {
+          debugPrint('Backup before upgrade failed: $e');
+        }
+      }
+    }
     final db = await f.openDatabase(
       dbPath,
       options: OpenDatabaseOptions(
@@ -37,6 +53,36 @@ class AppDatabase {
       ),
     );
     return AppDatabase._(db, f);
+  }
+
+  /// The database at [path] as it is, if it exists and is older than
+  /// [version]. Opened without a version so nothing migrates.
+  static Future<PendingUpgrade?> _pendingUpgrade(
+    DatabaseFactory f,
+    String path,
+  ) async {
+    if (path == inMemoryDatabasePath || !await f.databaseExists(path)) {
+      return null;
+    }
+    final db = await f.openDatabase(path);
+    final int from;
+    final Map<String, String?> settings;
+    try {
+      from =
+          (await db.rawQuery('PRAGMA user_version')).first.values.first as int;
+      if (from < 1 || from >= version) return null;
+      settings = {
+        for (final r in await db.query('settings'))
+          r['key']! as String: r['value'] as String?,
+      };
+      // Fold WAL writes into the main file so the copy is complete.
+      await db.rawQuery('PRAGMA wal_checkpoint(TRUNCATE)');
+    } finally {
+      await db.close();
+    }
+    final bytes = await File(path).readAsBytes();
+    if (!isSqliteFile(bytes)) return null;
+    return PendingUpgrade(from: from, bytes: bytes, settings: settings);
   }
 
   /// A self-contained copy of the database file, suitable for a backup.
@@ -70,6 +116,7 @@ class AppDatabase {
 
   /// User tables, parents before children.
   static const _tables = [
+    'units',
     'food_items',
     'meal_types',
     'meals',
@@ -269,6 +316,18 @@ class AppDatabase {
       // the column stays but is no longer used.
       await db.execute('UPDATE combo_items SET calories = NULL');
     }
+    if (from < 6) {
+      // Units move from code into the database so people can add their own.
+      await db.execute('''
+        CREATE TABLE units (
+          id TEXT PRIMARY KEY,
+          name TEXT NOT NULL COLLATE NOCASE UNIQUE,
+          position INTEGER NOT NULL,
+          active INTEGER NOT NULL DEFAULT 1,
+          created_at INTEGER NOT NULL
+        )''');
+      await insertDefaultUnits(db);
+    }
   }
 
   Future<void> close() => db.close();
@@ -280,4 +339,20 @@ class BackupFormatException implements Exception {
   final String message;
   @override
   String toString() => message;
+}
+
+/// A database about to be upgraded from schema [from] to [AppDatabase.version].
+class PendingUpgrade {
+  const PendingUpgrade({
+    required this.from,
+    required this.bytes,
+    required this.settings,
+  });
+  final int from;
+
+  /// The whole database file before the upgrade.
+  final Uint8List bytes;
+
+  /// Its settings rows, e.g. the backup folder.
+  final Map<String, String?> settings;
 }

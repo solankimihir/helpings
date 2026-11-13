@@ -94,22 +94,88 @@ MealType? guessMealType(Iterable<MealType> types, DateTime now) {
   );
 }
 
-enum FoodUnit {
-  piece('Piece'),
-  gram('Gram'),
-  spoon('Spoon'),
-  cup('Cup');
+/// A unit of quantity ("Piece", "Cup", or the user's own, like "Scoop").
+/// Stored in the `units` table; lines and foods keep only its [id].
+///
+/// Two units are equal when their ids are, so a renamed unit still matches
+/// what was logged with it.
+@immutable
+class FoodUnit {
+  const FoodUnit({
+    required this.id,
+    required this.name,
+    this.position = 0,
+    this.active = true,
+  });
 
-  const FoodUnit(this.label);
-  final String label;
+  static const piece = FoodUnit(id: 'piece', name: 'Piece');
+  static const gram = FoodUnit(id: 'gram', name: 'Gram', position: 1);
+  static const spoon = FoodUnit(id: 'spoon', name: 'Spoon', position: 2);
+  static const cup = FoodUnit(id: 'cup', name: 'Cup', position: 3);
 
-  static FoodUnit? tryParse(String? name) {
-    if (name == null) return null;
-    for (final u in values) {
-      if (u.name == name) return u;
+  /// Seeded on every install; ids match what earlier versions stored.
+  /// They can be hidden but not renamed or deleted.
+  static const builtIns = [piece, gram, spoon, cup];
+
+  final String id;
+
+  /// Singular, as shown in pickers: "Scoop".
+  final String name;
+
+  /// Order in pickers, ascending.
+  final int position;
+
+  /// Hidden units stay on past meals and foods but aren't offered.
+  final bool active;
+
+  String get label => name;
+
+  bool get isBuiltIn => builtIns.any((u) => u.id == id);
+
+  /// The unit [id] refers to: from [units] when listed there, else a
+  /// built-in, else a stand-in named after the id. Null for a null id.
+  static FoodUnit? resolve(
+    String? id, [
+    Map<String, FoodUnit> units = const {},
+  ]) {
+    if (id == null) return null;
+    final known = units[id];
+    if (known != null) return known;
+    for (final u in builtIns) {
+      if (u.id == id) return u;
     }
-    return null;
+    return FoodUnit(id: id, name: id);
   }
+
+  FoodUnit copyWith({String? name, int? position, bool? active}) => FoodUnit(
+    id: id,
+    name: name ?? this.name,
+    position: position ?? this.position,
+    active: active ?? this.active,
+  );
+
+  Map<String, Object?> toRow() => {
+    'id': id,
+    'name': name,
+    'position': position,
+    'active': active ? 1 : 0,
+  };
+
+  factory FoodUnit.fromRow(Map<String, Object?> r) => FoodUnit(
+    id: r['id'] as String,
+    name: r['name'] as String,
+    position: r['position'] as int,
+    active: (r['active'] as int) == 1,
+  );
+
+  @override
+  bool operator ==(Object other) => other is FoodUnit && other.id == id;
+
+  @override
+  int get hashCode => id.hashCode;
+
+  @override
+  String toString() => 'FoodUnit($id)';
 }
 
 /// A food in the master list ("Meal Items" tab).
@@ -148,15 +214,18 @@ class FoodItem {
     'id': id,
     'name': name,
     'default_calories': defaultCalories,
-    'default_unit': defaultUnit?.name,
+    'default_unit': defaultUnit?.id,
     'active': active ? 1 : 0,
   };
 
-  factory FoodItem.fromRow(Map<String, Object?> r) => FoodItem(
+  factory FoodItem.fromRow(
+    Map<String, Object?> r, [
+    Map<String, FoodUnit> units = const {},
+  ]) => FoodItem(
     id: r['id'] as String,
     name: r['name'] as String,
     defaultCalories: (r['default_calories'] as num?)?.toDouble(),
-    defaultUnit: FoodUnit.tryParse(r['default_unit'] as String?),
+    defaultUnit: FoodUnit.resolve(r['default_unit'] as String?, units),
     active: (r['active'] as int) == 1,
   );
 
@@ -201,17 +270,20 @@ class MealEntry {
     'item_id': itemId,
     'name_snapshot': nameSnapshot,
     'qty': qty,
-    'unit': unit?.name,
+    'unit': unit?.id,
     'calories': calories,
     'position': position,
   };
 
-  factory MealEntry.fromRow(Map<String, Object?> r) => MealEntry(
+  factory MealEntry.fromRow(
+    Map<String, Object?> r, [
+    Map<String, FoodUnit> units = const {},
+  ]) => MealEntry(
     id: r['id'] as String,
     itemId: r['item_id'] as String?,
     nameSnapshot: r['name_snapshot'] as String,
     qty: (r['qty'] as num?)?.toDouble(),
-    unit: FoodUnit.tryParse(r['unit'] as String?),
+    unit: FoodUnit.resolve(r['unit'] as String?, units),
     calories: (r['calories'] as num?)?.toDouble(),
   );
 }

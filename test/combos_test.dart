@@ -70,6 +70,7 @@ void main() {
     var db = await AppDatabase.open(factory: schemaFactory, path: path);
     await Repository(db).saveCombo(_usual);
     await db.db.execute('UPDATE combo_items SET calories = 90');
+    await db.db.execute('DROP TABLE units'); // added in v6
     await db.db.setVersion(4);
     await db.close();
     db = await AppDatabase.open(factory: schemaFactory, path: path);

@@ -47,6 +47,10 @@ class BackupFolderChannel(private val activity: Activity) {
 
     fun onMethodCall(call: MethodCall, result: MethodChannel.Result) {
         if (call.method == "pick") return pick(result)
+        // Android/data/<package>/files/backups: needs no permission.
+        if (call.method == "appFolder") {
+            return result.success(activity.getExternalFilesDir("backups")?.absolutePath)
+        }
         val token = call.argument<String>("token")
             ?: return result.error("bad_args", "token is required", null)
         val tree = Uri.parse(token)

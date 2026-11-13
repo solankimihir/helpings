@@ -49,6 +49,7 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
 **Your foods and meal types**
 - Starts with everyday foods (roti, dal, rice, idli, poha, tea…) with default
   calories and units (piece, gram, spoon, cup).
+- Add your own units (scoop, bowl, glass…); rename, reorder or hide them.
 - Give a food calories later and Helpings offers to fill in past meals that
   had none (scaled by quantity), and optionally to update lines with other
   values. Nothing changes without asking.

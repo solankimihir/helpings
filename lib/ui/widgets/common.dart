@@ -658,11 +658,13 @@ class _CupertinoPopup extends StatelessWidget {
   }
 }
 
-/// Unit picker: wheel on iOS, menu on Android. [allowNone] adds a "None" row.
+/// Unit picker: wheel on iOS, menu on Android. Offers [units] (usually
+/// `AppData.unitsFor(value)`); [allowNone] adds a "None" row.
 class UnitPicker extends StatelessWidget {
   const UnitPicker({
     super.key,
     required this.value,
+    required this.units,
     required this.onChanged,
     this.allowNone = false,
     this.radius = 11,
@@ -671,13 +673,14 @@ class UnitPicker extends StatelessWidget {
   });
 
   final FoodUnit? value;
+  final List<FoodUnit> units;
   final ValueChanged<FoodUnit?> onChanged;
   final bool allowNone;
   final double radius;
   final EdgeInsetsGeometry padding;
   final double fontSize;
 
-  List<FoodUnit?> get _values => [if (allowNone) null, ...FoodUnit.values];
+  List<FoodUnit?> get _values => [if (allowNone) null, ...units];
   String _label(FoodUnit? u) => u?.label ?? 'None';
 
   @override

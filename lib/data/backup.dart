@@ -65,3 +65,9 @@ List<String> autoBackupsToPrune(
     ..sort((a, b) => b.compareTo(a)); // ISO dates sort lexically, newest first
   return auto.skip(keep).toList();
 }
+
+/// Written just before a schema upgrade, e.g.
+/// `helpings-before-upgrade-v5-2026-11-13-1405.db`.
+String preUpgradeFileName(DateTime t, int from) =>
+    backupFileName(t)
+        .replaceFirst('helpings-backup-', 'helpings-before-upgrade-v$from-');

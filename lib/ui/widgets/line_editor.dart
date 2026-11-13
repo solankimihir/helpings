@@ -40,12 +40,16 @@ class DraftLineCard extends StatelessWidget {
     required this.row,
     required this.onRemove,
     required this.onUnit,
+    required this.units,
     this.fixedCalories,
   });
 
   final DraftLine row;
   final VoidCallback onRemove;
   final ValueChanged<FoodUnit?> onUnit;
+
+  /// Units to offer, from `AppData.unitsFor(row.unit)`.
+  final List<FoodUnit> units;
 
   /// When set, calories aren't editable: shows this text (worked out from
   /// the line's quantity) instead of the calorie field. Used by combos.
@@ -111,6 +115,7 @@ class DraftLineCard extends StatelessWidget {
                     const FieldLabel('Unit', small: true),
                     UnitPicker(
                       value: row.unit,
+                      units: units,
                       allowNone: row.unit == null,
                       onChanged: onUnit,
                     ),

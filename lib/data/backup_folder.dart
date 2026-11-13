@@ -39,6 +39,10 @@ abstract class BackupFolder {
 
   /// Gives up the app's access to the folder. Best effort.
   Future<void> release(String token);
+
+  /// A folder the app can always write to without asking: on Android,
+  /// `Android/data/<package>/files/backups`. Null where there isn't one.
+  Future<String?> appFolder();
 }
 
 /// Talks to `BackupFolderChannel` in MainActivity.kt / AppDelegate.swift.
@@ -86,6 +90,17 @@ class NativeBackupFolder implements BackupFolder {
   @override
   Future<void> release(String token) =>
       _call<void>('release', {'token': token});
+
+  @override
+  Future<String?> appFolder() async {
+    try {
+      return await _ch.invokeMethod<String>('appFolder');
+    } on MissingPluginException {
+      return null; // iOS has no such folder yet.
+    } on PlatformException {
+      return null;
+    }
+  }
 }
 
 /// Overridden in tests with an in-memory fake.

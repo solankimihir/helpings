@@ -15,6 +15,7 @@ import 'combos_screen.dart';
 import 'meal_type_sheet.dart' show minuteKey;
 import 'meal_types_screen.dart';
 import 'shell.dart';
+import 'units_screen.dart';
 import 'widgets/common.dart';
 
 final _backupDate = DateFormat('MMM d, y · h:mm a', 'en_US');
@@ -210,6 +211,30 @@ class SettingsScreen extends ConsumerWidget {
                           onChanged: (on) => _setReminders(context, ref, on),
                         ),
                       ),
+                      Tap(
+                        onTap: () => openUnits(context),
+                        radius: 0,
+                        child: row(
+                          title: 'Units',
+                          subtitle: data.visibleUnits
+                              .map((u) => u.name)
+                              .join(' · '),
+                          trailing: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text(
+                                plural(data.units.length, 'unit'),
+                                style: sans(14, color: c.inkA(.5)),
+                              ),
+                              Icon(
+                                Icons.chevron_right_rounded,
+                                size: 20,
+                                color: c.inkA(.3),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       row(
                         title: 'Default unit',
                         subtitle: 'Pre-filled for new food items',
@@ -217,6 +242,7 @@ class SettingsScreen extends ConsumerWidget {
                           width: 112,
                           child: UnitPicker(
                             value: data.defaultUnit,
+                            units: data.unitsFor(data.defaultUnit),
                             fontSize: 14,
                             padding: const EdgeInsets.symmetric(
                               horizontal: 10,

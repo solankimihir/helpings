@@ -68,18 +68,20 @@ double? parseNum(String v) {
   return double.tryParse(cleaned);
 }
 
+/// "Cup" → "Cups", "Glass" → "Glasses". Leaves words already ending in s.
+String pluralWord(String w) {
+  if (w.isEmpty) return w;
+  final lower = w.toLowerCase();
+  if (RegExp(r'(ss|sh|ch|x|z)$').hasMatch(lower)) return '${w}es';
+  if (lower.endsWith('s')) return w;
+  return '${w}s';
+}
+
 String _unitShort(FoodUnit? u, double? q) {
-  switch (u) {
-    case null:
-    case FoodUnit.piece:
-      return '';
-    case FoodUnit.gram:
-      return 'g';
-    case FoodUnit.spoon:
-    case FoodUnit.cup:
-      final base = u.label.toLowerCase();
-      return (q ?? 0) > 1 ? '${base}s' : base;
-  }
+  if (u == null || u.id == FoodUnit.piece.id) return '';
+  if (u.id == FoodUnit.gram.id) return 'g';
+  final base = u.name.toLowerCase();
+  return (q ?? 0) > 1 ? pluralWord(base) : base;
 }
 
 /// "2 Idli", "1 cup Dal", "150 g Rice".
@@ -98,8 +100,8 @@ String qtyLabel(double? qty, FoodUnit? unit) {
   final u = unit == null
       ? 'no unit'
       : (qty ?? 0) > 1
-      ? '${unit.label}s'
-      : unit.label;
+      ? pluralWord(unit.name)
+      : unit.name;
   return '$q $u';
 }
 

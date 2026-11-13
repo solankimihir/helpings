@@ -97,6 +97,12 @@ class FakeBackupFolder implements BackupFolder {
 
   @override
   Future<void> release(String token) async => released.add(token);
+
+  /// Returned by [appFolder]; null means there is none.
+  String? appDir;
+
+  @override
+  Future<String?> appFolder() async => appDir;
 }
 
 /// Records what would have been scheduled.

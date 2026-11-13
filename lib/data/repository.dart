@@ -59,8 +59,9 @@ class Repository {
   // ---- Food items ---------------------------------------------------------
 
   Future<List<FoodItem>> items() async {
+    final units = await _unitMap();
     final rows = await _db.query('food_items', orderBy: 'name COLLATE NOCASE');
-    return rows.map(FoodItem.fromRow).toList();
+    return [for (final r in rows) FoodItem.fromRow(r, units)];
   }
 
   /// Inserts or updates. Throws [DuplicateNameException] if another item
@@ -136,7 +137,7 @@ class Repository {
     for (final r in rows) {
       final id = r['id'] as String;
       final qty = (r['qty'] as num?)?.toDouble();
-      final unit = FoodUnit.tryParse(r['unit'] as String?);
+      final unit = FoodUnit.resolve(r['unit'] as String?);
       final cal = (r['calories'] as num?)?.toDouble();
       final next = itemCalories(after, qty, unit);
       if (next == null) {
@@ -179,7 +180,7 @@ class Repository {
           final cal = itemCalories(
             item,
             (rows.first['qty'] as num?)?.toDouble(),
-            FoodUnit.tryParse(rows.first['unit'] as String?),
+            FoodUnit.resolve(rows.first['unit'] as String?),
           );
           if (cal == null) continue;
           n += await txn.update(
@@ -191,6 +192,88 @@ class Repository {
         }
         return n;
       });
+
+  // ---- Units --------------------------------------------------------------
+
+  Future<List<FoodUnit>> units() async {
+    final rows = await _db.query('units', orderBy: 'position, name');
+    return rows.map(FoodUnit.fromRow).toList();
+  }
+
+  Future<Map<String, FoodUnit>> _unitMap() async => {
+    for (final u in await units()) u.id: u,
+  };
+
+  /// Inserts (at the end of the list) or updates. Throws
+  /// [DuplicateNameException] if another unit already uses the name.
+  /// Built-in units keep their names.
+  Future<void> saveUnit(FoodUnit unit) => _db.transaction((txn) async {
+    final clash = await txn.query(
+      'units',
+      columns: ['name'],
+      where: 'name = ? COLLATE NOCASE AND id != ?',
+      whereArgs: [unit.name, unit.id],
+      limit: 1,
+    );
+    if (clash.isNotEmpty) {
+      throw DuplicateNameException(clash.first['name'] as String);
+    }
+    final updated = await txn.update(
+      'units',
+      {if (!unit.isBuiltIn) 'name': unit.name, 'active': unit.active ? 1 : 0},
+      where: 'id = ?',
+      whereArgs: [unit.id],
+    );
+    if (updated == 0) {
+      final last = await txn.rawQuery(
+        'SELECT COALESCE(MAX(position), -1) + 1 AS p FROM units',
+      );
+      await txn.insert('units', {
+        ...unit.toRow(),
+        'position': last.first['p'] as int,
+        'created_at': _now,
+      });
+    }
+  });
+
+  /// Rewrites positions to match [ids], first to last.
+  Future<void> reorderUnits(List<String> ids) => _db.transaction((txn) async {
+    for (var i = 0; i < ids.length; i++) {
+      await txn.update(
+        'units',
+        {'position': i},
+        where: 'id = ?',
+        whereArgs: [ids[i]],
+      );
+    }
+  });
+
+  /// Foods, logged lines and combo lines that use the unit.
+  Future<int> unitUsageCount(String id) async {
+    final r = await _db.rawQuery(
+      'SELECT (SELECT COUNT(*) FROM food_items WHERE default_unit = ?) + '
+      '(SELECT COUNT(*) FROM meal_entries WHERE unit = ?) + '
+      '(SELECT COUNT(*) FROM combo_items WHERE unit = ?) AS n',
+      [id, id, id],
+    );
+    return r.first['n'] as int;
+  }
+
+  /// Throws [StateError] for a built-in unit or one still in use; hide
+  /// those instead.
+  Future<void> deleteUnit(String id) => _db.transaction((txn) async {
+    if (FoodUnit.builtIns.any((u) => u.id == id)) {
+      throw StateError('Unit $id is built in');
+    }
+    final used = await txn.rawQuery(
+      'SELECT 1 FROM food_items WHERE default_unit = ? '
+      'UNION ALL SELECT 1 FROM meal_entries WHERE unit = ? '
+      'UNION ALL SELECT 1 FROM combo_items WHERE unit = ? LIMIT 1',
+      [id, id, id],
+    );
+    if (used.isNotEmpty) throw StateError('Unit $id is in use');
+    await txn.delete('units', where: 'id = ?', whereArgs: [id]);
+  });
 
   // ---- Meal types ---------------------------------------------------------
 
@@ -282,11 +365,14 @@ class Repository {
   // ---- Combos -------------------------------------------------------------
 
   Future<List<Combo>> combos() async {
+    final units = await _unitMap();
     final rows = await _db.query('combos', orderBy: 'position, name');
     final lines = await _db.query('combo_items', orderBy: 'combo_id, position');
     final byCombo = <String, List<MealEntry>>{};
     for (final r in lines) {
-      (byCombo[r['combo_id'] as String] ??= []).add(MealEntry.fromRow(r));
+      (byCombo[r['combo_id'] as String] ??= []).add(
+        MealEntry.fromRow(r, units),
+      );
     }
     return [
       for (final r in rows)
@@ -360,6 +446,7 @@ class Repository {
   // ---- Meals --------------------------------------------------------------
 
   Future<List<Meal>> meals() async {
+    final units = await _unitMap();
     final mealRows = await _db.query('meals', orderBy: 'date, time');
     final entryRows = await _db.query(
       'meal_entries',
@@ -367,7 +454,7 @@ class Repository {
     );
     final byMeal = <String, List<MealEntry>>{};
     for (final r in entryRows) {
-      (byMeal[r['meal_id'] as String] ??= []).add(MealEntry.fromRow(r));
+      (byMeal[r['meal_id'] as String] ??= []).add(MealEntry.fromRow(r, units));
     }
     return [
       for (final r in mealRows)

@@ -30,7 +30,7 @@ Future<int> insertDefaultItems(DatabaseExecutor db) async {
       'id': uuid.v4(),
       'name': name,
       'default_calories': cal,
-      'default_unit': unit.name,
+      'default_unit': unit.id,
       'active': 1,
       'created_at': now,
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
@@ -60,6 +60,17 @@ Future<void> insertDefaultMealTypes(DatabaseExecutor db) async {
       'position': i,
       'active': 1,
       'start_minute': start,
+      'created_at': now,
+    }, conflictAlgorithm: ConflictAlgorithm.ignore);
+  }
+}
+
+/// Inserts the built-in units that are missing.
+Future<void> insertDefaultUnits(DatabaseExecutor db) async {
+  final now = DateTime.now().millisecondsSinceEpoch;
+  for (final u in FoodUnit.builtIns) {
+    await db.insert('units', {
+      ...u.toRow(),
       'created_at': now,
     }, conflictAlgorithm: ConflictAlgorithm.ignore);
   }

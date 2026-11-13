@@ -234,6 +234,10 @@ class _ItemSheetState extends ConsumerState<ItemSheet> {
                             const FieldLabel('Default unit'),
                             UnitPicker(
                               value: _unit,
+                              units: ref
+                                  .watch(appDataProvider)
+                                  .requireValue
+                                  .unitsFor(_unit),
                               allowNone: true,
                               radius: 14,
                               fontSize: 16,
