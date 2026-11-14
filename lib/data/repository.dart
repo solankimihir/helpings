@@ -129,6 +129,65 @@ class Repository {
 
   Future<int> restoreDefaultItems() => insertDefaultItems(_db);
 
+  /// In one transaction: adds [newUnits] (at the end of the unit order),
+  /// then inserts or updates [items]. Throws [DuplicateNameException] if a
+  /// new food's name is taken, and then nothing is changed.
+  Future<void> importFoods(List<FoodItem> items, List<FoodUnit> newUnits) =>
+      _db.transaction((txn) async {
+        for (final u in newUnits) {
+          final last = await txn.rawQuery(
+            'SELECT COALESCE(MAX(position), -1) + 1 AS p FROM units',
+          );
+          await txn.insert('units', {
+            ...u.toRow(),
+            'position': last.first['p'] as int,
+            'created_at': _now,
+          });
+        }
+        for (final item in items) {
+          final clash = await txn.query(
+            'food_items',
+            columns: ['name'],
+            where: 'name = ? COLLATE NOCASE AND id != ?',
+            whereArgs: [item.name, item.id],
+            limit: 1,
+          );
+          if (clash.isNotEmpty) {
+            throw DuplicateNameException(clash.first['name'] as String);
+          }
+          final updated = await txn.update(
+            'food_items',
+            item.toRow(),
+            where: 'id = ?',
+            whereArgs: [item.id],
+          );
+          if (updated == 0) {
+            await txn.insert('food_items', {
+              ...item.toRow(),
+              'created_at': _now,
+            });
+          }
+        }
+      });
+
+  /// Undoes [importFoods]: puts [before] back as it was and deletes the
+  /// foods in [created] (meals that used them since keep their names).
+  /// Units it added are kept.
+  Future<void> undoImportFoods(List<FoodItem> before, List<String> created) =>
+      _db.transaction((txn) async {
+        for (final item in before) {
+          await txn.update(
+            'food_items',
+            item.toRow(),
+            where: 'id = ?',
+            whereArgs: [item.id],
+          );
+        }
+        for (final id in created) {
+          await txn.delete('food_items', where: 'id = ?', whereArgs: [id]);
+        }
+      });
+
   /// Logged lines of [after] that a change from [before]'s default calories
   /// could update.
   Future<PastLines> pastLines(FoodItem before, FoodItem after) async {

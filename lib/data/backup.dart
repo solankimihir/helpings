@@ -54,6 +54,11 @@ String preRestoreFileName(DateTime t) =>
     backupFileName(t)
         .replaceFirst('helpings-backup-', 'helpings-before-restore-');
 
+/// Written just before an AI food list is imported.
+String preImportFileName(DateTime t) =>
+    backupFileName(t)
+        .replaceFirst('helpings-backup-', 'helpings-before-import-');
+
 /// Automatic backups in [names] beyond the newest [keep]. Files that don't
 /// match the automatic naming pattern (manual copies, anything else the user
 /// put there) are never selected.

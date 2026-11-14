@@ -42,10 +42,11 @@ String mealsToCsv(AppData data) {
       ]);
     }
   }
-  return '${rows.map((r) => r.map(_cell).join(',')).join('\r\n')}\r\n';
+  return '${rows.map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n';
 }
 
-String _cell(String v) =>
+/// One RFC 4180 field: quoted only when it has to be.
+String csvCell(String v) =>
     v.contains(RegExp(r'[",\r\n]')) ? '"${v.replaceAll('"', '""')}"' : v;
 
 /// UTF-8 with a byte-order mark, so Excel reads non-ASCII names correctly.
@@ -62,7 +63,7 @@ final csvSaverProvider =
       (ref) =>
           (fileName, bytes) async =>
               await FilePicker.saveFile(
-                dialogTitle: 'Export meals',
+                dialogTitle: 'Export CSV',
                 fileName: fileName,
                 bytes: bytes,
                 mimeType: 'text/csv',

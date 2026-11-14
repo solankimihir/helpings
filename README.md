@@ -28,6 +28,7 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
   <img src="docs/readme/screens/2_add.png" width="200" alt="Add a meal with combos">
   <img src="docs/readme/screens/3_trends.png" width="200" alt="Weekly trends">
   <img src="docs/readme/screens/7_items.png" width="200" alt="Your food list">
+  <img src="docs/readme/screens/8_ask_ai.png" width="200" alt="Ask an AI to build your food list or fill in missing calories">
 </p>
 
 ## Features
@@ -57,10 +58,24 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
 - Meal types are editable: rename, reorder, hide, or add your own, each with
   an optional "usually starts at" time and a daily reminder.
 
+**Ask an AI**
+- Build a starter food list: copy a prompt into ChatGPT, Claude or Gemini. It
+  asks where you live, which cuisines you eat, veg or non-veg, home-cooked or
+  eating out, then suggests foods with calories and units.
+- Fill in missing calories: copy your food list with a prompt. The chat asks
+  about portions and cooking first, then fills in only the blanks.
+- Paste the reply back. Helpings backs up all your data first (to your backup
+  folder, or the app's own folder if you agree), then shows every change to
+  review. New foods and blank calories are ticked; overwrites aren't. New units
+  are created as needed, and food names are never changed.
+- Offers to fill in past meals that had no calories, with Undo.
+- Copy and paste only: the app still has no internet permission. Shown once
+  in a short walkthrough on first launch; then in Meal Items → Ask AI.
+
 **Your data**
 - Save a backup copy, or keep daily backups in a folder you choose (the last
   30 are kept). Restore from any backup file.
-- Export all meals as CSV.
+- Export all meals as CSV, or the food list as CSV.
 - Android home-screen widget with today's calories and an Add meal button.
 - Light, dark, or follow the system.
 

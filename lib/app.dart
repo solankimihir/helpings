@@ -3,6 +3,7 @@ import 'package:material_ui/material_ui.dart';
 
 import 'state/app_state.dart';
 import 'theme/app_theme.dart';
+import 'ui/ai_intro.dart';
 import 'ui/auto_backup_runner.dart';
 import 'ui/home_widget_sync.dart';
 import 'ui/reminder_sync.dart';
@@ -28,7 +29,9 @@ class HelpingsApp extends ConsumerWidget {
       themeMode: themeMode,
       home: AutoBackupRunner(
         child: ReminderSync(
-          child: HomeWidgetSync(child: home ?? const Shell()),
+          child: HomeWidgetSync(
+            child: AiIntroRunner(child: home ?? const Shell()),
+          ),
         ),
       ),
     );

@@ -106,7 +106,7 @@ void main() {
     );
     await tester.tap(find.text('Settings'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Export as spreadsheet (CSV)'));
+    await tester.tap(find.text('Export meals (CSV)'));
     await tester.pump();
 
     expect(name, csvFileName(DateTime.now()));

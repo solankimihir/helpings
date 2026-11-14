@@ -5,6 +5,7 @@ import '../data/format.dart';
 import '../data/models.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import 'ai_foods_screen.dart';
 import 'item_sheet.dart';
 import 'shell.dart';
 import 'widgets/common.dart';
@@ -61,6 +62,12 @@ class _ItemsScreenState extends ConsumerState<ItemsScreen> {
                 Expanded(
                   child: Text('Meal Items', style: serif(32, color: c.ink)),
                 ),
+                Pill(
+                  label: 'Ask AI',
+                  icon: Icons.auto_awesome_rounded,
+                  onTap: () => openAiFoods(context),
+                ),
+                const SizedBox(width: 8),
                 Pill(
                   label: '+ New',
                   style: PillStyle.dark,

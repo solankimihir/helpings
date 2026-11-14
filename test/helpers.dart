@@ -23,6 +23,7 @@ Future<AppDatabase> pumpApp(
   List<Override> overrides = const [],
   ReminderScheduler? reminders,
   HomeWidgetBridge? homeWidget,
+  bool showAiIntro = false,
 }) async {
   sqfliteFfiInit();
   final db = await AppDatabase.open(
@@ -30,6 +31,8 @@ Future<AppDatabase> pumpApp(
     path: path,
   );
   addTearDown(db.close);
+  // Most tests don't want the first-launch walkthrough in the way.
+  if (!showAiIntro) await Repository(db).setSetting('ai_intro_seen', '1');
   if (seed != null) await seed(Repository(db));
   await tester.pumpWidget(
     ProviderScope(

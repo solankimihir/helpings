@@ -145,9 +145,13 @@ class Pill extends StatelessWidget {
     this.weight = FontWeight.w500,
     this.color,
     this.icon,
+    this.expand = false,
   });
 
   final String label;
+
+  /// Fills the available width with the label centred.
+  final bool expand;
 
   /// Optional leading icon, in the text colour.
   final IconData? icon;
@@ -189,25 +193,29 @@ class Pill extends StatelessWidget {
         color: bg,
         border: border,
         padding: padding,
-        child: icon == null
-            ? Text(
-                label,
-                style: sans(fontSize, weight: weight, color: color ?? fg),
-              )
-            : Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(icon, size: fontSize + 3, color: color ?? fg),
-                  const SizedBox(width: 5),
-                  Text(
-                    label,
-                    style: sans(fontSize, weight: weight, color: color ?? fg),
-                  ),
-                ],
-              ),
+        child: expand
+            ? Center(heightFactor: 1, child: _content(fg))
+            : _content(fg),
       ),
     );
   }
+
+  Widget _content(Color fg) => icon == null
+      ? Text(
+          label,
+          style: sans(fontSize, weight: weight, color: color ?? fg),
+        )
+      : Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(icon, size: fontSize + 3, color: color ?? fg),
+            const SizedBox(width: 5),
+            Text(
+              label,
+              style: sans(fontSize, weight: weight, color: color ?? fg),
+            ),
+          ],
+        );
 }
 
 /// Filter / meal-type chip.

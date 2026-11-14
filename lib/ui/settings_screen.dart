@@ -7,10 +7,13 @@ import 'package:material_ui/material_ui.dart';
 import '../data/backup.dart';
 import '../data/csv_export.dart';
 import '../data/database.dart';
+import '../data/food_csv.dart';
 import '../data/format.dart';
 import '../data/reminders.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import '../version.dart';
+import 'ai_foods_screen.dart';
 import 'combos_screen.dart';
 import 'meal_type_sheet.dart' show minuteKey;
 import 'meal_types_screen.dart';
@@ -146,7 +149,10 @@ class SettingsScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SectionLabel(
+                  'Meals',
+                  padding: EdgeInsets.fromLTRB(6, 22, 6, 8),
+                ),
                 AppCard(
                   radius: 20,
                   padding: const EdgeInsets.symmetric(
@@ -211,6 +217,57 @@ class SettingsScreen extends ConsumerWidget {
                           onChanged: (on) => _setReminders(context, ref, on),
                         ),
                       ),
+                      row(
+                        title: 'Default meal time',
+                        subtitle: 'Used when adding a meal',
+                        trailing: Text(
+                          'Now',
+                          style: sans(14, color: c.inkA(.5)),
+                        ),
+                      ),
+                      row(
+                        title: 'Calorie totals',
+                        subtitle: 'Never estimated — only what you enter',
+                        divider: false,
+                        trailing: Text(
+                          'Exact',
+                          style: sans(
+                            14,
+                            weight: FontWeight.w500,
+                            color: c.link,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SectionLabel(
+                  'Food list',
+                  padding: EdgeInsets.fromLTRB(6, 22, 6, 8),
+                ),
+                AppCard(
+                  radius: 20,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 4,
+                  ),
+                  child: Column(
+                    children: [
+                      Tap(
+                        onTap: () => openAiFoods(context),
+                        radius: 0,
+                        child: row(
+                          title: 'Ask an AI',
+                          subtitle:
+                              'Build a starter food list, or fill in missing '
+                              'calories',
+                          trailing: Icon(
+                            Icons.chevron_right_rounded,
+                            size: 20,
+                            color: c.inkA(.3),
+                          ),
+                        ),
+                      ),
                       Tap(
                         onTap: () => openUnits(context),
                         radius: 0,
@@ -254,31 +311,28 @@ class SettingsScreen extends ConsumerWidget {
                           ),
                         ),
                       ),
-                      row(
-                        title: 'Default meal time',
-                        subtitle: 'Used when adding a meal',
-                        trailing: Text(
-                          'Now',
-                          style: sans(14, color: c.inkA(.5)),
-                        ),
+                      action(
+                        'Export food list (CSV)',
+                        c.link,
+                        () => _exportFoods(context, ref),
                       ),
-                      row(
-                        title: 'Calorie totals',
-                        subtitle: 'Never estimated — only what you enter',
-                        divider: false,
-                        trailing: Text(
-                          'Exact',
-                          style: sans(
-                            14,
-                            weight: FontWeight.w500,
-                            color: c.link,
-                          ),
-                        ),
-                      ),
+                      action('Restore default food items', c.link, () async {
+                        final added = await notifier.restoreDefaultItems();
+                        if (!context.mounted) return;
+                        toast(
+                          context,
+                          added == 0
+                              ? 'All default food items are already here.'
+                              : 'Added ${plural(added, 'food item')}.',
+                        );
+                      }, divider: true),
                     ],
                   ),
                 ),
-                const SizedBox(height: 16),
+                const SectionLabel(
+                  'Backup and export',
+                  padding: EdgeInsets.fromLTRB(6, 22, 6, 8),
+                ),
                 AppCard(
                   radius: 20,
                   padding: const EdgeInsets.symmetric(
@@ -355,7 +409,7 @@ class SettingsScreen extends ConsumerWidget {
                         divider: auto != null,
                       ),
                       action(
-                        'Export as spreadsheet (CSV)',
+                        'Export meals (CSV)',
                         c.link,
                         () => _exportCsv(context, ref),
                         divider: true,
@@ -372,16 +426,6 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                   child: Column(
                     children: [
-                      action('Restore default food items', c.link, () async {
-                        final added = await notifier.restoreDefaultItems();
-                        if (!context.mounted) return;
-                        toast(
-                          context,
-                          added == 0
-                              ? 'All default food items are already here.'
-                              : 'Added ${plural(added, 'food item')}.',
-                        );
-                      }),
                       action('Delete all meals', c.danger, () async {
                         if (data.meals.isEmpty) {
                           toast(context, 'There are no meals to delete.');
@@ -401,14 +445,15 @@ class SettingsScreen extends ConsumerWidget {
                         if (context.mounted) {
                           toast(context, 'All meals deleted.');
                         }
-                      }, divider: true),
+                      }),
                     ],
                   ),
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(6, 20, 6, 0),
                   child: Text(
-                    'Helpings · ${plural(data.items.length, 'food item')} · '
+                    'Helpings $appVersion ($appBuild)\n'
+                    '${plural(data.items.length, 'food item')} · '
                     '${plural(data.meals.length, 'meal')} stored on device',
                     style: sans(12, color: c.inkA(.4), height: 1.5),
                   ),
@@ -482,6 +527,26 @@ class SettingsScreen extends ConsumerWidget {
     } catch (e) {
       debugPrint('CSV export failed: $e');
       if (context.mounted) toast(context, "Couldn't export your meals.");
+    }
+  }
+
+  Future<void> _exportFoods(BuildContext context, WidgetRef ref) async {
+    final data = ref.read(appDataProvider).requireValue;
+    if (data.items.isEmpty) {
+      toast(context, 'There are no foods to export yet.');
+      return;
+    }
+    try {
+      final saved = await ref.read(csvSaverProvider)(
+        foodCsvFileName(DateTime.now()),
+        csvBytes(foodsToCsv(data)),
+      );
+      if (saved && context.mounted) {
+        toast(context, 'Exported ${plural(data.items.length, 'food')}.');
+      }
+    } catch (e) {
+      debugPrint('Food CSV export failed: $e');
+      if (context.mounted) toast(context, "Couldn't export your foods.");
     }
   }
 

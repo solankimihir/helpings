@@ -22,6 +22,12 @@ YOUR FOOD LIST
 • Hide foods you no longer eat, or delete them — past meals keep their names
 • Give a food calories later and Helpings offers to fill in past meals that had none; nothing changes without asking
 
+ASK AN AI (NEW)
+• Build a starter food list: copy a prompt into ChatGPT, Claude or Gemini. It asks where you live, which cuisines you eat, veg or non-veg, home-cooked or eating out, then suggests foods with calories
+• Fill in missing calories: send your food list; the chat asks about portions and cooking, one question at a time, then fills in only the blanks
+• Paste the reply back. Helpings backs up all your data first, and you review every change before anything is imported
+• It's all copy and paste: Helpings itself still never goes online
+
 HISTORY AND TRENDS
 • Swipe between days on the home screen, or jump to any date
 • Meals grouped by day with daily totals, filtered by meal type
@@ -31,6 +37,6 @@ YOUR DATA STAYS YOURS
 • Everything stays on your phone. No account, no ads, no analytics and no internet access at all
 • Save a backup copy whenever you like, or keep daily backups in a folder you choose (the last 30 are kept)
 • Restore from any backup file
-• Export all your meals as a spreadsheet (CSV)
+• Export your meals or your food list as a spreadsheet (CSV)
 
 Light, dark or follow your system setting.

@@ -8,6 +8,7 @@ import 'package:uuid/uuid.dart';
 import '../data/backup.dart';
 import '../data/backup_folder.dart';
 import '../data/database.dart';
+import '../data/food_csv.dart';
 import '../data/format.dart';
 import '../data/models.dart';
 import '../data/repository.dart';
@@ -43,6 +44,7 @@ class AppData {
     this.lastBackupAt,
     this.autoBackup,
     this.remindersOn = false,
+    this.aiIntroSeen = true,
   }) : _byId = {for (final i in items) i.id: i},
        _typeById = {for (final t in mealTypes) t.id: t};
 
@@ -94,6 +96,9 @@ class AppData {
 
   /// Meal reminder notifications are enabled on this device.
   final bool remindersOn;
+
+  /// The "Ask an AI" walkthrough has been shown on this device.
+  final bool aiIntroSeen;
   final Map<String, FoodItem> _byId;
 
   FoodItem? itemById(String? id) => id == null ? null : _byId[id];
@@ -147,12 +152,51 @@ Future<String?> backupBeforeUpgrade(
       debugPrint('Pre-upgrade copy to the backup folder failed: $e');
     }
   }
+  return saveToAppFolder(folder, name, u.bytes);
+}
+
+/// Writes [bytes] as [name] in the app's own folder. Returns the file's
+/// path, or null if there is no such folder.
+Future<String?> saveToAppFolder(
+  BackupFolder folder,
+  String name,
+  Uint8List bytes,
+) async {
   final dir = await folder.appFolder();
   if (dir == null) return null;
   final file = File('$dir/$name');
   await file.parent.create(recursive: true);
-  await file.writeAsBytes(u.bytes, flush: true);
+  await file.writeAsBytes(bytes, flush: true);
   return file.path;
+}
+
+/// The data couldn't be backed up, so the import didn't start.
+class ImportBackupException implements Exception {
+  const ImportBackupException(this.message);
+  final String message;
+  @override
+  String toString() => message;
+}
+
+/// What [AppDataNotifier.importFoods] changed, to fill past lines and undo.
+@immutable
+class FoodImportResult {
+  const FoodImportResult({
+    required this.before,
+    required this.after,
+    required this.created,
+    required this.lines,
+  });
+
+  /// Existing foods as they were, and as they are now (same order).
+  final List<FoodItem> before;
+  final List<FoodItem> after;
+
+  /// Ids of the foods the import added.
+  final List<String> created;
+
+  /// Lines of every changed food, as they were before any past-line fill.
+  final List<LinesSnapshot> lines;
 }
 
 @immutable
@@ -181,6 +225,7 @@ const _kAutoFolderName = 'auto_backup_folder_name';
 const _kAutoLastDay = 'auto_backup_last_day';
 const _kAutoError = 'auto_backup_error';
 const _kRemindersOn = 'reminders_on';
+const _kAiIntroSeen = 'ai_intro_seen';
 
 /// Settings that describe this device rather than the user's data, so a
 /// restore from another phone (or an old file) must not overwrite them.
@@ -191,6 +236,7 @@ const deviceSettings = {
   _kAutoLastDay,
   _kAutoError,
   _kRemindersOn,
+  _kAiIntroSeen,
 };
 
 ThemeMode _parseThemeMode(String? v) => ThemeMode.values.firstWhere(
@@ -233,6 +279,7 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       themeMode: _parseThemeMode(settings[_kThemeMode]),
       lastBackupAt: DateTime.tryParse(settings[_kLastBackup] ?? ''),
       remindersOn: settings[_kRemindersOn] == '1',
+      aiIntroSeen: settings[_kAiIntroSeen] == '1',
       autoBackup: folder == null
           ? null
           : AutoBackupStatus(
@@ -355,6 +402,9 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
 
   Future<void> setRemindersOn(bool on) =>
       _mutate((r) => r.setSetting(_kRemindersOn, on ? '1' : null));
+
+  Future<void> markAiIntroSeen() =>
+      _mutate((r) => r.setSetting(_kAiIntroSeen, '1'));
 
   Future<void> setDefaultUnit(FoodUnit u) =>
       _mutate((r) => r.setSetting(_kDefaultUnit, u.id));
@@ -482,6 +532,116 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       }),
     );
   }
+
+  /// Saves a full copy of the data before an import, as
+  /// [preImportFileName]: to the backup folder, or with [toAppFolder] (or
+  /// no folder set) to the app's own folder. Returns where it went. Throws
+  /// [ImportBackupException] if it couldn't be saved.
+  Future<String> backupBeforeImport({
+    bool toAppFolder = false,
+    DateTime? now,
+  }) async {
+    final repo = await _repo;
+    final name = preImportFileName(now ?? DateTime.now());
+    final bytes = await repo.snapshot();
+    final status = state.value?.autoBackup;
+    if (!toAppFolder && status != null) {
+      try {
+        await _folder.write(status.folderToken, name, bytes);
+        return '${status.folderName}/$name';
+      } catch (e) {
+        debugPrint('Pre-import copy to the backup folder failed: $e');
+        throw ImportBackupException(
+          e is FolderAccessException
+              ? e.message
+              : 'Couldn’t save a backup to “${status.folderName}”.',
+        );
+      }
+    }
+    try {
+      final path = await saveToAppFolder(_folder, name, bytes);
+      if (path != null) return path;
+    } catch (e) {
+      debugPrint('Pre-import copy to the app folder failed: $e');
+    }
+    throw const ImportBackupException(
+      'Couldn’t save a backup to the app’s folder.',
+    );
+  }
+
+  /// Applies the [rows] the user ticked: creates the units they need,
+  /// adds new foods and sets calories and units on existing ones (names
+  /// are never changed). Throws [DuplicateNameException].
+  Future<FoodImportResult> importFoods(Iterable<ImportRow> rows) async {
+    final repo = await _repo;
+    final before = <FoodItem>[];
+    final after = <FoodItem>[];
+    final added = <FoodItem>[];
+    final units = <FoodUnit>{};
+    for (final r in rows.where((r) => r.importable)) {
+      if (r.newUnit && r.unit != null) units.add(r.unit!);
+      final item = r.item;
+      if (item == null) {
+        added.add(
+          FoodItem(
+            id: newId(),
+            name: r.name,
+            defaultCalories: r.calories,
+            defaultUnit: r.unit,
+          ),
+        );
+      } else {
+        before.add(item);
+        after.add(
+          item.copyWith(
+            defaultCalories: () => r.calories,
+            defaultUnit: () => r.unit,
+          ),
+        );
+      }
+    }
+    final lines = [for (final i in before) await repo.snapshotLines(i.id)];
+    await _mutate((r) => r.importFoods([...after, ...added], units.toList()));
+    return FoodImportResult(
+      before: before,
+      after: after,
+      created: [for (final i in added) i.id],
+      lines: lines,
+    );
+  }
+
+  /// Past lines of the imported foods that have no calories and that their
+  /// new default can fill, per food.
+  Future<List<(FoodItem, List<String>)>> importFillable(
+    FoodImportResult result,
+  ) async {
+    final repo = await _repo;
+    return [
+      for (final (i, after) in result.after.indexed)
+        if ((await repo.pastLines(result.before[i], after)).fillable
+            case final ids when ids.isNotEmpty)
+          (after, ids),
+    ];
+  }
+
+  /// Fills [fillable] (from [importFillable]). Returns how many changed.
+  Future<int> fillImportedLines(List<(FoodItem, List<String>)> fillable) async {
+    var n = 0;
+    await _mutate((r) async {
+      for (final (item, ids) in fillable) {
+        n += await r.applyPastLines(item, ids);
+      }
+    });
+    return n;
+  }
+
+  /// Puts the food list and past lines back as they were before [result].
+  Future<void> undoImportFoods(FoodImportResult result) => _mutate((r) async {
+    for (final snap in result.lines) {
+      await r.restoreLines(snap);
+    }
+    await r.undoImportFoods(result.before, result.created);
+  });
 
   /// Replaces all data with the backup in [bytes]. When automatic backups
   /// are on, the current data is first saved to the backup folder, and the

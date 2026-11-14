@@ -1,4 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
+import 'package:helpings/version.dart';
 import 'package:helpings/data/format.dart';
 import 'package:helpings/data/models.dart';
 import 'package:helpings/data/repository.dart';
@@ -34,7 +35,8 @@ void main() {
     await tester.pumpAndSettle();
     expect(
       find.text(
-        'Helpings · ${defaultItems.length} food items · 1 meal stored on device',
+        'Helpings $appVersion ($appBuild)\n'
+        '${defaultItems.length} food items · 1 meal stored on device',
       ),
       findsOneWidget,
     );

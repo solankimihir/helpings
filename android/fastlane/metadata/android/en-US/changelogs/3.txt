@@ -1,0 +1,1 @@
+New: Ask an AI. Copy a prompt into ChatGPT, Claude or Gemini to build a starter food list or fill in missing calories. It asks you one question at a time, then you paste its reply back. Helpings backs up your data first and you review every change. Settings is now grouped into sections and shows the app version. Export your food list as CSV.

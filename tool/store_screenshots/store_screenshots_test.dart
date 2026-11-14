@@ -719,6 +719,26 @@ void main() {
       '$_out/phoneScreenshots/7_items.png',
     );
 
+    // 8. Ask an AI.
+    final ai = await _capture(
+      tester,
+      show: () async {
+        await tap(tester, find.text('Meal Items'));
+        await tap(tester, find.text('Ask AI'));
+      },
+    );
+    await _write(
+      tester,
+      _Shot(
+        line1: 'Ask an AI to',
+        line2: 'fill the blanks',
+        subtitle: 'Build your food list or add missing calories',
+        screen: ai,
+      ),
+      const Size(1080, 1920),
+      '$_out/phoneScreenshots/8_ask_ai.png',
+    );
+
     // Feature graphic.
     final icon = await tester.runAsync(() async {
       final codec = await ui.instantiateImageCodec(
