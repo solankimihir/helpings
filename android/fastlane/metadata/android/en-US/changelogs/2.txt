@@ -1,0 +1,1 @@
+Calories now follow the quantity as you type: 3 rotis count 3 times the calories. Add, rename, reorder and hide your own units in Settings > Units. When you change a food's unit, Helpings offers to update past meals too, with undo. Messages no longer hide behind the tab bar. The app now backs up your data before upgrading it.

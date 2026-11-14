@@ -35,11 +35,12 @@ void main() {
     await tester.tap(find.text('Roti  100', findRichText: true));
     await tester.pumpAndSettle();
 
-    // Pre-filled from the food item's defaults; bump quantity to 2 and
-    // calories to 200.
+    // Pre-filled from the food item's defaults; bumping quantity to 2
+    // doubles the calories.
     expect(find.widgetWithText(TextField, '100'), findsOneWidget);
     await tester.enterText(find.widgetWithText(TextField, '1'), '2');
-    await tester.enterText(find.widgetWithText(TextField, '100'), '200');
+    await tester.pump();
+    expect(find.widgetWithText(TextField, '200'), findsOneWidget);
 
     // Add an item with no calories.
     await tester.enterText(

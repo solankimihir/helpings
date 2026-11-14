@@ -19,7 +19,11 @@ class DraftLine {
     required String cal,
   }) : rid = newId(),
        qty = TextEditingController(text: qty),
-       cal = TextEditingController(text: cal);
+       cal = TextEditingController(text: cal) {
+    _lastQty = this.qty.text;
+    _setRate();
+    this.qty.addListener(_onQty);
+  }
 
   final String rid;
   final String? itemId;
@@ -28,7 +32,46 @@ class DraftLine {
   final TextEditingController cal;
   FoodUnit? unit;
 
+  /// Calories per one unit, so calories follow the quantity as it's typed.
+  /// Taken from the line's starting values and re-derived whenever the user
+  /// types calories themselves. Null when there are no calories to scale.
+  double? _rate;
+  String _lastQty = '';
+
+  /// A missing quantity counts as 1, as in [scaledCalories].
+  double? get _qtyValue {
+    final q = qty.text.trim();
+    return q.isEmpty ? 1 : parseNum(q);
+  }
+
+  void _setRate() {
+    final c = cal.text.trim();
+    final q = _qtyValue;
+    final v = c.isEmpty ? null : parseNum(c);
+    _rate = v == null || q == null || q == 0 ? null : v / q;
+  }
+
+  /// Call when the user edits the calorie field by hand.
+  void caloriesEdited() {
+    if (cal.text.trim().isEmpty) {
+      _rate = null;
+    } else if (_qtyValue != 0) {
+      _setRate();
+    }
+  }
+
+  void _onQty() {
+    if (qty.text == _lastQty) return; // selection/composing change only
+    _lastQty = qty.text;
+    final rate = _rate;
+    final q = _qtyValue;
+    if (rate == null || q == null) return;
+    final v = (rate * q * 10).round() / 10;
+    cal.text = fmtQty(v);
+  }
+
   void dispose() {
+    qty.removeListener(_onQty);
     qty.dispose();
     cal.dispose();
   }
@@ -145,6 +188,7 @@ class DraftLineCard extends StatelessWidget {
                     else
                       AppTextField(
                         controller: row.cal,
+                        onChanged: (_) => row.caloriesEdited(),
                         hint: 'optional',
                         radius: 11,
                         padding: fieldPad,
