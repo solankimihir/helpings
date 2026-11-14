@@ -44,7 +44,12 @@ platform :android do
 
   desc "Upload store listing text, icon, feature graphic and screenshots"
   lane :listing do
+    # supply needs an existing release to attach to, even when it only
+    # uploads the listing: use the current build on the Closed testing track.
+    build = File.read(File.expand_path("../../pubspec.yaml", __dir__))[/^version: .*\+(\d+)$/, 1]
     upload_to_play_store(
+      track: "alpha",
+      version_code: build.to_i,
       skip_upload_apk: true,
       skip_upload_aab: true,
       skip_upload_changelogs: true,
