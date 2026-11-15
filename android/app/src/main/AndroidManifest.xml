@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools">
-    <!-- Re-schedule meal reminders after the phone restarts. -->
+    <!-- Re-schedule meal reminders, and redraw the home-screen widgets for
+         the right day, after the phone restarts. -->
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED"/>
 
     <!-- WorkManager (pulled in by the home-screen widget) declares these for
@@ -48,6 +49,26 @@
             </intent-filter>
             <meta-data android:name="android.appwidget.provider"
                 android:resource="@xml/helpings_widget_info" />
+        </receiver>
+        <receiver android:name=".HelpingsMealsWidgetProvider"
+            android:label="Helpings · Meals"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data android:name="android.appwidget.provider"
+                android:resource="@xml/helpings_meals_widget_info" />
+        </receiver>
+        <!-- Redraws the widgets just after midnight (its own alarm) and
+             whenever "today" may have changed under them. -->
+        <receiver android:name=".WidgetDayReceiver" android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+                <action android:name="android.intent.action.DATE_CHANGED" />
+            </intent-filter>
         </receiver>
         <!-- Don't delete the meta-data below.
              This is used by the Flutter tool to generate GeneratedPluginRegistrant.java -->

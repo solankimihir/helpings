@@ -1,11 +1,12 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- Today's totals and an Add meal button. Text is filled in by
+<!-- Today's calories, meals and foods. Text is filled in by
      HelpingsWidgetProvider; the sample values show in the widget picker. -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     android:id="@+id/widget_root"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
+    android:gravity="center_vertical"
     android:orientation="vertical"
     android:padding="16dp">
 
@@ -50,25 +51,17 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:maxLines="1"
-        android:text="3 meals"
+        android:text="3 meals · 7 items"
         android:textColor="@color/widget_muted"
         android:textSize="12.5sp" />
 
-    <!-- Flexible gap pushing the button down. Widgets may only use the
-         RemoteViews view types (no Space), so an empty FrameLayout. -->
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
-
     <TextView
-        android:id="@+id/widget_add"
-        android:layout_width="match_parent"
-        android:layout_height="40dp"
-        android:background="@drawable/widget_button"
-        android:gravity="center"
-        android:text="+ Add meal"
-        android:textColor="@color/widget_on_primary"
-        android:textSize="14sp"
-        android:textStyle="bold" />
+        android:id="@+id/widget_note"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:maxLines="1"
+        android:text="Some without calories"
+        android:textColor="@color/widget_muted"
+        android:textSize="11sp"
+        android:visibility="gone" />
 </LinearLayout>

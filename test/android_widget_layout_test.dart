@@ -31,13 +31,30 @@ const _remoteViewsClasses = {
 
 void main() {
   test('widget layouts only use views RemoteViews can inflate', () {
-    final info = File('android/app/src/main/res/xml/helpings_widget_info.xml')
-        .readAsStringSync();
-    final layouts = RegExp(r'@layout/(\w+)')
-        .allMatches(info)
-        .map((m) => m.group(1)!)
-        .toSet();
-    expect(layouts, isNotEmpty);
+    // Every widget's own layouts, plus the list rows the Meals widget
+    // inflates in code (widget_*.xml).
+    final layouts = <String>{};
+    for (final info
+        in Directory('android/app/src/main/res/xml')
+            .listSync()
+            .whereType<File>()
+            .where((f) => f.path.endsWith('_widget_info.xml'))) {
+      layouts.addAll(
+        RegExp(r'@layout/(\w+)')
+            .allMatches(info.readAsStringSync())
+            .map((m) => m.group(1)!),
+      );
+    }
+    expect(layouts, containsAll(['helpings_widget', 'helpings_meals_widget']));
+    layouts.addAll(
+      Directory('android/app/src/main/res/layout')
+          .listSync()
+          .whereType<File>()
+          .map((f) => f.uri.pathSegments.last)
+          .where((n) => n.startsWith('widget_') && n.endsWith('.xml'))
+          .map((n) => n.substring(0, n.length - 4)),
+    );
+    expect(layouts, containsAll(['widget_meal_header', 'widget_meal_item']));
 
     for (final name in layouts) {
       final xml = File('android/app/src/main/res/layout/$name.xml')

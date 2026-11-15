@@ -32,15 +32,88 @@ void main() {
       ],
       defaultUnit: FoodUnit.piece,
     );
-    expect(
-      WidgetPayload.of(data, now),
-      const WidgetPayload(
-        date: '2026-11-13',
-        calories: 290,
-        meals: 2,
-        incomplete: true,
-      ),
+    final p = WidgetPayload.of(data, now);
+    expect(p.date, '2026-11-13');
+    expect(p.calories, 290);
+    expect(p.meals, 2);
+    expect(p.items, 3);
+    expect(p.incomplete, isTrue);
+  });
+
+  test('payload lists today’s meals in time order with their foods', () {
+    final now = DateTime(2026, 11, 13, 21);
+    final data = AppData(
+      items: const [],
+      mealTypes: const [
+        MealType(id: 'breakfast', name: 'Breakfast'),
+        MealType(id: 'dinner', name: 'Dinner'),
+      ],
+      meals: [
+        _meal('y', '2026-11-12', [500]),
+        // Saved out of order: dinner first.
+        Meal(
+          id: 'd',
+          typeId: 'dinner',
+          date: '2026-11-13',
+          time: '20:15',
+          entries: const [
+            MealEntry(
+              id: 'd1',
+              nameSnapshot: 'Rice',
+              qty: 150,
+              unit: FoodUnit.gram,
+              calories: 195,
+            ),
+            MealEntry(id: 'd2', nameSnapshot: 'Pickle'),
+          ],
+        ),
+        Meal(
+          id: 'b',
+          typeId: 'breakfast',
+          date: '2026-11-13',
+          time: '08:30',
+          entries: const [
+            MealEntry(
+              id: 'b1',
+              nameSnapshot: 'Idli',
+              qty: 2,
+              unit: FoodUnit.piece,
+              calories: 116.4,
+            ),
+          ],
+        ),
+      ],
+      defaultUnit: FoodUnit.piece,
     );
+    expect(WidgetPayload.of(data, now).lines, const [
+      WidgetLine.meal('Breakfast · 8:30 AM', '116 kcal'),
+      WidgetLine.item('2 Idli', '116'),
+      WidgetLine.meal('Dinner · 8:15 PM', '195+ kcal'),
+      WidgetLine.item('150 g Rice', '195'),
+      WidgetLine.item('Pickle', ''),
+    ]);
+  });
+
+  test('renaming a food today changes the payload', () {
+    final now = DateTime(2026, 11, 13, 9);
+    WidgetPayload of(String name) => WidgetPayload.of(
+      AppData(
+        items: const [],
+        meals: [
+          Meal(
+            id: 'a',
+            typeId: 'lunch',
+            date: '2026-11-13',
+            time: '12:00',
+            entries: [MealEntry(id: 'a1', nameSnapshot: name, calories: 100)],
+          ),
+        ],
+        defaultUnit: FoodUnit.piece,
+      ),
+      now,
+    );
+    expect(of('Dal'), of('Dal'));
+    expect(of('Dal'), isNot(of('Dal fry')));
   });
 
   testWidgets('publishes on start and after each change', (tester) async {
@@ -63,6 +136,7 @@ void main() {
     await tester.pumpAndSettle();
     expect(widget.published.last.calories, 450);
     expect(widget.published.last.meals, 2);
+    expect(widget.published.last.items, 2);
 
     // A change that doesn't affect today (yesterday's meal) isn't re-sent.
     final sent = widget.published.length;

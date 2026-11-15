@@ -1,4 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="widget_description">Today’s calories and meals, with a button to add a meal.</string>
+    <string name="widget_description">Today’s calories, with how many meals and foods.</string>
+    <string name="widget_meals_description">Today’s meals and the foods in each, with a button to add a meal.</string>
 </resources>

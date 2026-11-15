@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- updatePeriodMillis is only a fallback; WidgetRefresh redraws just after
+     midnight and after a reboot. -->
+<appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
+    android:description="@string/widget_meals_description"
+    android:initialLayout="@layout/helpings_meals_widget"
+    android:previewLayout="@layout/helpings_meals_widget"
+    android:minWidth="180dp"
+    android:minHeight="180dp"
+    android:targetCellWidth="3"
+    android:targetCellHeight="3"
+    android:resizeMode="horizontal|vertical"
+    android:updatePeriodMillis="1800000"
+    android:widgetCategory="home_screen" />

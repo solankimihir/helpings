@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- updatePeriodMillis (30 min, the minimum) makes the widget roll over to
-     a fresh day after midnight even if the app isn't opened. -->
+<!-- updatePeriodMillis (30 min, the minimum) is only a fallback;
+     WidgetRefresh redraws just after midnight and after a reboot. -->
 <appwidget-provider xmlns:android="http://schemas.android.com/apk/res/android"
     android:description="@string/widget_description"
     android:initialLayout="@layout/helpings_widget"

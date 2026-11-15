@@ -78,4 +78,7 @@ flutter {
 
 dependencies {
     coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.4")
+    // RemoteViewsCompat: the Meals widget's scrolling list without a
+    // RemoteViewsService. Already pulled in by home_widget's Glance.
+    implementation("androidx.core:core-remoteviews:1.1.0")
 }
