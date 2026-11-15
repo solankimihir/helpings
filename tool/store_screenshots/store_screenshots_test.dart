@@ -619,15 +619,24 @@ void main() {
               w.key is ValueKey<String> &&
               (w.key! as ValueKey<String>).value.startsWith('bar-'),
         );
+        // Tapping a bar also loads that day into Through the day.
         await tap(tester, bars.at(bars.evaluate().length ~/ 2));
+        await tap(tester, find.text('7-day avg'));
+        // The whole Through the day card, under the tapped day's summary.
+        await tester.ensureVisible(
+          find.byKey(const ValueKey('day-curve-plot')),
+        );
+        await tester.pumpAndSettle();
+        await tester.drag(find.byType(ListView).last, const Offset(0, -60));
+        await tester.pumpAndSettle();
       },
     );
     await _write(
       tester,
       _Shot(
-        line1: 'See your week',
-        line2: 'at a glance',
-        subtitle: 'Daily calories, averages and favourite foods',
+        line1: 'See how your day',
+        line2: 'adds up',
+        subtitle: 'Against yesterday, last week or your average',
         screen: trends,
         dark: true,
       ),

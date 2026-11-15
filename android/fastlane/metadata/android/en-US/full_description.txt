@@ -14,7 +14,7 @@ FAST LOGGING
 YOUR MEALS, YOUR WAY
 • Breakfast, lunch, dinner and snack to start — rename, reorder or hide them, and add your own (pre-workout, brunch…)
 • Optional reminders: a gentle nudge if a meal isn't logged by the time you choose
-• Home-screen widget with today's calories and a quick Add meal button
+• Two home-screen widgets: today's calories with meal and item counts, and today's meals with every food in them. Both start fresh at midnight
 
 YOUR FOOD LIST
 • Starts with everyday foods like roti, dal, rice, idli, poha and tea
@@ -22,7 +22,7 @@ YOUR FOOD LIST
 • Hide foods you no longer eat, or delete them — past meals keep their names
 • Give a food calories later and Helpings offers to fill in past meals that had none; nothing changes without asking
 
-ASK AN AI (NEW)
+ASK AN AI
 • Build a starter food list: copy a prompt into ChatGPT, Claude or Gemini. It asks where you live, which cuisines you eat, veg or non-veg, home-cooked or eating out, then suggests foods with calories
 • Fill in missing calories: send your food list; the chat asks about portions and cooking, one question at a time, then fills in only the blanks
 • Paste the reply back. Helpings backs up all your data first, and you review every change before anything is imported
@@ -32,6 +32,7 @@ HISTORY AND TRENDS
 • Swipe between days on the home screen, or jump to any date
 • Meals grouped by day with daily totals, filtered by meal type
 • Weekly and monthly trends: calories per day, your daily average and most-logged foods
+• NEW: Through the day. See your calories add up meal by meal, against yesterday, the same day last week or your 7-day average. Tap or drag to compare at any time
 
 YOUR DATA STAYS YOURS
 • Everything stays on your phone. No account, no ads, no analytics and no internet access at all

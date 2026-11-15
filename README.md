@@ -26,7 +26,7 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
 <p align="center">
   <img src="docs/readme/screens/1_home.png" width="200" alt="Home: today's calories and meals">
   <img src="docs/readme/screens/2_add.png" width="200" alt="Add a meal with combos">
-  <img src="docs/readme/screens/3_trends.png" width="200" alt="Weekly trends">
+  <img src="docs/readme/screens/3_trends.png" width="200" alt="Trends: calories through the day against your 7-day average">
   <img src="docs/readme/screens/7_items.png" width="200" alt="Your food list">
   <img src="docs/readme/screens/8_ask_ai.png" width="200" alt="Ask an AI to build your food list or fill in missing calories">
 </p>
@@ -46,6 +46,10 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
 - History groups meals by day with daily totals, filtered by meal type.
 - Trends: calories per day for the week or month, the daily average, and the
   most-logged foods.
+- Through the day: the running calorie total, meal by meal, over a grey
+  comparison: the day before, the same weekday last week, or the average of
+  the last 7 logged days. A pace line compares the two at the current time;
+  tap or drag to read both at any time.
 
 **Your foods and meal types**
 - Starts with everyday foods (roti, dal, rice, idli, poha, tea…) with default
@@ -76,7 +80,9 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
 - Save a backup copy, or keep daily backups in a folder you choose (the last
   30 are kept). Restore from any backup file.
 - Export all meals as CSV, or the food list as CSV.
-- Android home-screen widget with today's calories and an Add meal button.
+- Android home-screen widgets: Today (calories, meals and items) and Meals
+  (today's meals with their foods, and an Add meal button). Both roll over to
+  the new day at midnight and after a restart.
 - Light, dark, or follow the system.
 
 ## Platforms
