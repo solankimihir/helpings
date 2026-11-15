@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:intl/intl.dart';
 
 import 'models.dart';
@@ -126,4 +128,25 @@ String dayGroupLabel(String key, [DateTime? now]) {
   return d.year == n.year
       ? DateFormat('MMMM d', 'en_US').format(d)
       : DateFormat('MMMM d, y', 'en_US').format(d);
+}
+
+/// Clean y-axis top and step for [max] (0 / 500 / 1,000 / …), 2–4 steps.
+(double, double) niceScale(double max) {
+  if (max <= 0) return (1000, 500);
+  for (final step in const [
+    50.0,
+    100.0,
+    250.0,
+    500.0,
+    1000.0,
+    2000.0,
+    2500.0,
+    5000.0,
+    10000.0,
+  ]) {
+    final top = (max / step).ceil() * step;
+    if (top / step <= 4) return (top, step);
+  }
+  final step = math.pow(10, (math.log(max) / math.ln10).floor()).toDouble();
+  return ((max / step).ceil() * step, step);
 }

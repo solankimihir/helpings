@@ -412,3 +412,15 @@ class MealTotals {
 
   static const zero = MealTotals(0, 0, 0);
 }
+
+/// What Trends › Through the day draws in grey under the chosen day.
+enum CurveBaseline {
+  /// The day before the one shown.
+  yesterday,
+
+  /// The same weekday a week earlier.
+  lastWeek,
+
+  /// The average of the 7 most recent days with meals before it.
+  average7,
+}

@@ -1,9 +1,10 @@
+import 'package:intl/intl.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:helpings/data/format.dart';
 import 'package:helpings/data/models.dart';
 import 'package:helpings/data/trends.dart';
 import 'package:helpings/state/app_state.dart';
-import 'package:helpings/ui/trends_view.dart';
 import 'package:material_ui/material_ui.dart';
 
 import 'helpers.dart';
@@ -171,5 +172,114 @@ void main() {
     // A layout overflow would have thrown during the pumps above.
     expect(find.text('Calories per day'), findsOneWidget);
     expect(find.textContaining('Striped'), findsOneWidget);
+  });
+
+  group('Through the day', () {
+    Future<void> openTrends(WidgetTester tester) async {
+      tester.view.physicalSize = const Size(400, 2400);
+      tester.view.devicePixelRatio = 1;
+      addTearDown(tester.view.reset);
+      await tester.tap(find.text('History'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Trends'));
+      await tester.pumpAndSettle();
+    }
+
+    String pace(WidgetTester tester) => tester
+        .widget<Text>(find.byKey(const ValueKey('day-curve-pace')))
+        .textSpan!
+        .toPlainText();
+
+    testWidgets('compares today with a saved choice of baseline', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        seed: (r) async {
+          await r.saveMeal(_meal('t', todayKey(), [('Dal', 400)]));
+          await r.saveMeal(_meal('y', shiftKey(-1), [('Rice', 250)]));
+          await r.saveMeal(_meal('w', shiftKey(-7), [('Pasta', 900)]));
+        },
+      );
+      await openTrends(tester);
+      expect(find.text('Through the day'), findsOneWidget);
+      expect(find.text('Today'), findsOneWidget);
+      // Meals are at noon, so the numbers depend on the time of the test.
+      final noonPassed = DateTime.now().hour >= 12;
+      expect(
+        pace(tester),
+        contains(
+          noonPassed ? 'yesterday: 250 kcal · today 400 (+150)' : '(±0)',
+        ),
+      );
+
+      await tester.tap(
+        find.text('Last ${DateFormat('EEE', 'en_US').format(DateTime.now())}'),
+      );
+      await tester.pumpAndSettle();
+      if (noonPassed) {
+        expect(pace(tester), contains('900 kcal · today 400 (−500)'));
+      }
+
+      // The choice is saved and survives a rebuild of the data.
+      final container = ProviderScope.containerOf(
+        tester.element(find.text('Through the day')),
+      );
+      expect(
+        container.read(appDataProvider).requireValue.trendBaseline,
+        CurveBaseline.lastWeek,
+      );
+    });
+
+    testWidgets('steps back a day; the baseline is then the day before it', (
+      tester,
+    ) async {
+      await pumpApp(
+        tester,
+        seed: (r) async {
+          await r.saveMeal(_meal('y', shiftKey(-1), [('Rice', 250)]));
+          await r.saveMeal(_meal('z', shiftKey(-2), [('Idli', 100)]));
+        },
+      );
+      await openTrends(tester);
+      await tester.tap(find.bySemanticsLabel('Previous day'));
+      await tester.pumpAndSettle();
+      expect(find.text('Day before'), findsOneWidget);
+      expect(pace(tester), 'Whole day: 250 kcal · day before 100 (+150)');
+      await tester.tap(find.bySemanticsLabel('Next day'));
+      await tester.pumpAndSettle();
+      expect(find.text('Yesterday'), findsOneWidget);
+    });
+
+    testWidgets('tapping a bar shows that day, and tapping the plot reads it', (
+      tester,
+    ) async {
+      final twoAgo = shiftKey(-2);
+      await pumpApp(
+        tester,
+        seed: (r) async {
+          await r.saveMeal(
+            _meal('z', twoAgo, [('Idli', 100), ('Chutney', null)]),
+          );
+        },
+      );
+      await openTrends(tester);
+      if (daysAgo(twoAgo) >= DateTime.now().weekday) {
+        await tester.tap(find.bySemanticsLabel('Previous week'));
+        await tester.pumpAndSettle();
+      }
+      await tester.tap(find.byKey(ValueKey('bar-$twoAgo')));
+      await tester.pumpAndSettle();
+      expect(
+        find.text(DateFormat('EEE, MMM d', 'en_US').format(parseKey(twoAgo))),
+        findsOneWidget,
+      );
+      expect(pace(tester), contains('100 kcal · Nothing to compare yet'));
+      expect(find.textContaining('Hollow dot'), findsOneWidget);
+
+      await tester.tap(find.byKey(const ValueKey('day-curve-plot')));
+      await tester.pumpAndSettle();
+      expect(pace(tester), startsWith('At '));
+    });
   });
 }

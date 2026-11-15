@@ -45,6 +45,7 @@ class AppData {
     this.autoBackup,
     this.remindersOn = false,
     this.aiIntroSeen = true,
+    this.trendBaseline = CurveBaseline.yesterday,
   }) : _byId = {for (final i in items) i.id: i},
        _typeById = {for (final t in mealTypes) t.id: t};
 
@@ -87,6 +88,9 @@ class AppData {
 
   /// Light, dark, or follow the device.
   final ThemeMode themeMode;
+
+  /// What Trends › Through the day compares the day with.
+  final CurveBaseline trendBaseline;
 
   /// When the user last saved a backup file, if ever.
   final DateTime? lastBackupAt;
@@ -219,6 +223,7 @@ class AutoBackupStatus {
 
 const _kDefaultUnit = 'default_unit';
 const _kThemeMode = 'theme_mode';
+const _kTrendBaseline = 'trend_baseline';
 const _kLastBackup = 'last_backup_at';
 const _kAutoFolder = 'auto_backup_folder';
 const _kAutoFolderName = 'auto_backup_folder_name';
@@ -277,6 +282,10 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
           visible.firstOrNull ??
           FoodUnit.piece,
       themeMode: _parseThemeMode(settings[_kThemeMode]),
+      trendBaseline: CurveBaseline.values.firstWhere(
+        (b) => b.name == settings[_kTrendBaseline],
+        orElse: () => CurveBaseline.yesterday,
+      ),
       lastBackupAt: DateTime.tryParse(settings[_kLastBackup] ?? ''),
       remindersOn: settings[_kRemindersOn] == '1',
       aiIntroSeen: settings[_kAiIntroSeen] == '1',
@@ -438,6 +447,9 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
 
   Future<void> setThemeMode(ThemeMode m) =>
       _mutate((r) => r.setSetting(_kThemeMode, m.name));
+
+  Future<void> setTrendBaseline(CurveBaseline b) =>
+      _mutate((r) => r.setSetting(_kTrendBaseline, b.name));
 
   /// Saves a copy of the database wherever the user picks. Returns false if
   /// they cancelled the save dialog; throws if the copy could not be made.

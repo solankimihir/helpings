@@ -1,16 +1,20 @@
+import 'dart:async';
 import 'dart:math' as math;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../data/day_curve.dart';
 import '../data/format.dart';
+import '../data/models.dart';
 import '../data/trends.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'home_screen.dart';
 import 'shell.dart';
 import 'widgets/common.dart';
+import 'widgets/day_curve_chart.dart';
 
 /// History → Trends: calories per day for a week or month, the average,
 /// meal count and most-logged foods.
@@ -29,6 +33,9 @@ class _TrendsViewState extends ConsumerState<TrendsView> {
 
   /// [dayKey] of the tapped bar.
   String? _selected;
+
+  /// [dayKey] shown in "Through the day".
+  String _curveDay = todayKey();
 
   void _setPeriod(TrendRange range, int offset) => setState(() {
     _range = range;
@@ -146,8 +153,10 @@ class _TrendsViewState extends ConsumerState<TrendsView> {
               _CaloriesChart(
                 summary: s,
                 selected: _selected,
-                onSelect: (d) =>
-                    setState(() => _selected = _selected == d ? null : d),
+                onSelect: (d) => setState(() {
+                  _selected = _selected == d ? null : d;
+                  _curveDay = d;
+                }),
               ),
               const SizedBox(height: 10),
               if (selected != null)
@@ -190,6 +199,11 @@ class _TrendsViewState extends ConsumerState<TrendsView> {
               ],
             ],
           ),
+        ),
+        const SizedBox(height: 12),
+        _ThroughTheDay(
+          day: _curveDay,
+          onDay: (d) => setState(() => _curveDay = d),
         ),
         const SizedBox(height: 12),
         AppCard(
@@ -306,27 +320,6 @@ class _Stat extends StatelessWidget {
       ],
     );
   }
-}
-
-/// Clean y-axis top and step for [max] (0 / 500 / 1,000 / …), 2–4 steps.
-(double, double) niceScale(double max) {
-  if (max <= 0) return (1000, 500);
-  for (final step in const [
-    50.0,
-    100.0,
-    250.0,
-    500.0,
-    1000.0,
-    2000.0,
-    2500.0,
-    5000.0,
-    10000.0,
-  ]) {
-    final top = (max / step).ceil() * step;
-    if (top / step <= 4) return (top, step);
-  }
-  final step = math.pow(10, (math.log(max) / math.ln10).floor()).toDouble();
-  return ((max / step).ceil() * step, step);
 }
 
 class _CaloriesChart extends StatelessWidget {
@@ -566,6 +559,152 @@ class _SelectedDay extends StatelessWidget {
           onTap: onOpen,
         ),
       ],
+    );
+  }
+}
+
+/// One day's calories as a running total, over a grey comparison: the day
+/// before, the same weekday last week, or the recent average.
+class _ThroughTheDay extends ConsumerStatefulWidget {
+  const _ThroughTheDay({required this.day, required this.onDay});
+
+  /// [dayKey].
+  final String day;
+  final ValueChanged<String> onDay;
+
+  @override
+  ConsumerState<_ThroughTheDay> createState() => _ThroughTheDayState();
+}
+
+class _ThroughTheDayState extends ConsumerState<_ThroughTheDay> {
+  Timer? _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    // Moves "now" along, and rolls over to a new day, while Trends is open.
+    _tick = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted) setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tick?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final data = ref.watch(appDataProvider).requireValue;
+    final c = context.c;
+    final now = DateTime.now();
+    final today = todayKey(now);
+    final day = widget.day;
+    final isToday = day == today;
+    final date = parseKey(day);
+    final weekday = DateFormat('EEE', 'en_US').format(date);
+    final weekdayLong = DateFormat('EEEE', 'en_US').format(date);
+    final baseline = data.trendBaseline;
+
+    String chip(CurveBaseline b) => switch (b) {
+      CurveBaseline.yesterday => isToday ? 'Yesterday' : 'Day before',
+      CurveBaseline.lastWeek => 'Last $weekday',
+      CurveBaseline.average7 => '7-day avg',
+    };
+    final baseName = switch (baseline) {
+      CurveBaseline.yesterday => isToday ? 'yesterday' : 'day before',
+      CurveBaseline.lastWeek => 'last $weekday',
+      CurveBaseline.average7 => '7-day avg',
+    };
+    final basePhrase = switch (baseline) {
+      CurveBaseline.yesterday => 'yesterday',
+      CurveBaseline.lastWeek => 'last $weekdayLong',
+      CurveBaseline.average7 => 'on average',
+    };
+
+    final curve = curveFor(data, day);
+    final base = baselineCurve(data, day, baseline);
+    final nowMinute = isToday ? now.hour * 60 + now.minute : null;
+    final (start, end) = curveRange(curve, base, now: nowMinute);
+
+    return AppCard(
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: Padding(
+                  padding: const EdgeInsets.only(left: 4),
+                  child: Text(
+                    'Through the day',
+                    style: sans(14.5, weight: FontWeight.w600, color: c.ink),
+                  ),
+                ),
+              ),
+              _NavButton(
+                icon: Icons.chevron_left_rounded,
+                label: 'Previous day',
+                onTap: () => widget.onDay(shiftKey(-1, date)),
+              ),
+              Text(
+                isToday
+                    ? 'Today'
+                    : DateFormat('EEE, MMM d', 'en_US').format(date),
+                style: sans(13, weight: FontWeight.w600, color: c.ink),
+              ),
+              _NavButton(
+                icon: Icons.chevron_right_rounded,
+                label: 'Next day',
+                onTap: isToday ? null : () => widget.onDay(shiftKey(1, date)),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Wrap(
+            spacing: 7,
+            runSpacing: 7,
+            children: [
+              for (final b in CurveBaseline.values)
+                AppChip(
+                  label: chip(b),
+                  selected: b == baseline,
+                  onTap: () =>
+                      ref.read(appDataProvider.notifier).setTrendBaseline(b),
+                ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (curve.points.isEmpty && base == null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(4, 8, 4, 10),
+              child: Text(
+                'No meals on this day.',
+                style: sans(12.5, color: c.inkA(.45)),
+              ),
+            )
+          else
+            DayCurveChart(
+              key: ValueKey('$day-${baseline.name}'),
+              day: curve,
+              base: base,
+              start: start,
+              end: end,
+              now: nowMinute,
+              baseName: baseName,
+              basePhrase: basePhrase,
+            ),
+          if (curve.anyIncomplete) ...[
+            const SizedBox(height: 8),
+            Text(
+              'Hollow dot: some items in that meal have no calories.',
+              style: sans(12, color: c.inkA(.5), height: 1.35),
+            ),
+          ],
+        ],
+      ),
     );
   }
 }
