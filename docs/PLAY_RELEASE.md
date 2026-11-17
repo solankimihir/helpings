@@ -45,7 +45,7 @@ Play Console → **Create app**
 | Data safety | See below |
 | Government app | No |
 | Financial features | My app doesn't provide any financial features |
-| Health apps | Select **Nutrition and weight management** (meal / calorie logging). Not a medical device. |
+| Health apps | Select **Nutrition and weight management** (meal / calorie logging, optional weight and water tracking). Since 1.1.2 the app also logs optional blood sugar readings, so also consider **Disease and condition management**. Not a medical device; it shows values only and gives no medical advice. |
 | App category | **Health & Fitness** · Tags: Nutrition, Diet, Calorie counter (pick what's offered) |
 | Store contact | Email `support@mihirsolanki.in`; website `https://mihirsolanki.in` (optional) |
 
@@ -53,7 +53,9 @@ Play Console → **Create app**
 
 - Does your app collect or share any of the required user data types? → **No**
   (all data stays on device; the app has no internet permission. Data in the
-  user's own Android backup is not considered collection by Google.)
+  user's own Android backup is not considered collection by Google.) This
+  still holds for the optional health trackers (1.1.2): water, blood sugar
+  and weight never leave the device either.
 
 Answering **No** skips the encryption and deletion-request questions; the
 listing then shows "No data collected · No data shared".

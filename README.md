@@ -27,6 +27,7 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
   <img src="docs/readme/screens/1_home.png" width="200" alt="Home: today's calories and meals">
   <img src="docs/readme/screens/2_add.png" width="200" alt="Add a meal with combos">
   <img src="docs/readme/screens/3_trends.png" width="200" alt="Trends: calories through the day against your 7-day average">
+  <img src="docs/readme/screens/5_health.png" width="200" alt="Health: optional water, blood sugar and weight tracking">
   <img src="docs/readme/screens/7_items.png" width="200" alt="Your food list">
   <img src="docs/readme/screens/8_ask_ai.png" width="200" alt="Ask an AI to build your food list or fill in missing calories">
 </p>
@@ -50,6 +51,20 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
   comparison: the day before, the same weekday last week, or the average of
   the last 7 logged days. A pace line compares the two at the current time;
   tap or drag to read both at any time.
+
+**Health tracking (optional)**
+- Water, blood sugar and weight, each off until you turn it on in Settings ›
+  Tracking. A Health tab appears while any of them is on; turning one off
+  hides it and keeps its entries.
+- Water: quick-add 250 / 500 ml (or 8 / 16 fl oz) or any amount, with an
+  optional daily goal shown as a ring, and the last 7 days as bars.
+- Blood sugar: readings with the time and when they were taken (fasting,
+  before or after a meal, bedtime), a note, and the last 14 days as a chart.
+  Values are shown as entered, never labelled high or low.
+- Weight: weigh-ins with the change over 7 and 30 days, and a 30 or 90 day
+  trend line.
+- Units: mg/dL or mmol/L, kg or lb, ml or fl oz. Values are stored in mg/dL,
+  kg and ml, so switching units never changes what was logged.
 
 **Your foods and meal types**
 - Starts with everyday foods (roti, dal, rice, idli, poha, tea…) with default
@@ -79,7 +94,7 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
 **Your data**
 - Save a backup copy, or keep daily backups in a folder you choose (the last
   30 are kept). Restore from any backup file.
-- Export all meals as CSV, or the food list as CSV.
+- Export all meals as CSV, the food list as CSV, or health entries as CSV.
 - Android home-screen widgets: Today (calories, meals and items) and Meals
   (today's meals with their foods, and an Add meal button). Both roll over to
   the new day at midnight and after a restart.

@@ -166,6 +166,70 @@ Future<void> _seed(Repository r) async {
     'other',
   ]);
 
+  // Health trackers: all three on, with a few weeks of entries.
+  for (final t in ['track_water', 'track_sugar', 'track_weight']) {
+    await r.setSetting(t, '1');
+  }
+  await r.setSetting('water_goal_ml', '2500');
+  for (final (time, ml) in [
+    ('07:45', 250.0),
+    ('10:30', 500.0),
+    ('13:30', 250.0),
+    ('16:15', 500.0),
+  ]) {
+    await r.saveWater(
+      WaterEntry(id: 'w${n++}', date: todayKey(), time: time, ml: ml),
+    );
+  }
+  for (var d = 1; d <= 6; d++) {
+    for (var g = 0; g < 6 + d % 4; g++) {
+      await r.saveWater(
+        WaterEntry(
+          id: 'w${n++}',
+          date: shiftKey(-d),
+          time: timeKey(8 + g * 2, 0),
+          ml: 300,
+        ),
+      );
+    }
+  }
+  const fasting = [96, 92, 101, 94, 98, 90, 95, 99, 93, 97, 91, 94, 96];
+  const after = [134, 141, 128, 146, 131, 138, 125, 143, 129, 136, 132, 127];
+  for (var d = 0; d < 13; d++) {
+    await r.saveSugar(
+      SugarReading(
+        id: 's${n++}',
+        date: shiftKey(-d),
+        time: '07:${30 + d % 3 * 5}',
+        mgdl: fasting[d].toDouble(),
+        context: SugarContext.fasting,
+      ),
+    );
+    if (d < after.length && d.isEven) {
+      await r.saveSugar(
+        SugarReading(
+          id: 's${n++}',
+          date: shiftKey(-d),
+          time: '14:${10 + d % 4 * 5}',
+          mgdl: after[d].toDouble(),
+          context: SugarContext.afterMeal,
+          note: d == 0 ? 'After lunch' : '',
+        ),
+      );
+    }
+  }
+  for (var d = 87; d >= 0; d -= 3) {
+    final wobble = [0.0, .3, -.2, .4, -.1][d % 5];
+    await r.saveWeight(
+      WeightEntry(
+        id: 'k${n++}',
+        date: shiftKey(-d),
+        time: '07:05',
+        kg: double.parse((72.4 + d * .03 + wobble).toStringAsFixed(1)),
+      ),
+    );
+  }
+
   // Settings: reminders and daily backup on, already backed up today.
   await r.setSetting('reminders_on', '1');
   await r.setSetting('auto_backup_folder', 'sample');
@@ -661,24 +725,26 @@ void main() {
       '$_out/phoneScreenshots/4_history.png',
     );
 
-    // 5. Meal types and reminders.
-    final types = await _capture(
+    // 5. Health: the optional trackers.
+    final health = await _capture(
       tester,
       show: () async {
-        await tap(tester, find.text('Settings'));
-        await tap(tester, find.text('Meal types'));
+        await tap(tester, find.text('Health'));
+        // Water's total and buttons at the top, then sugar and weight.
+        await tester.drag(find.byType(ListView).last, const Offset(0, -330));
+        await tester.pumpAndSettle();
       },
     );
     await _write(
       tester,
       _Shot(
-        line1: 'Your meals,',
-        line2: 'your way',
-        subtitle: 'Custom meal types, with gentle reminders',
-        screen: types,
+        line1: 'Water, sugar',
+        line2: 'and weight too',
+        subtitle: 'Optional trackers, each off until you want it',
+        screen: health,
       ),
       const Size(1080, 1920),
-      '$_out/phoneScreenshots/5_meal_types.png',
+      '$_out/phoneScreenshots/5_health.png',
     );
 
     // 6. Backup.

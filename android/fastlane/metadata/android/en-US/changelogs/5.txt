@@ -1,0 +1,1 @@
+New, and optional: track water, blood sugar and weight. Turn any of them on in Settings › Tracking and a Health tab appears. Quick-add water against a daily goal, log sugar readings with when you took them (fasting, after a meal…), and see your weight trend. Choose mg/dL or mmol/L, kg or lb, ml or fl oz. Included in backups; export as CSV.

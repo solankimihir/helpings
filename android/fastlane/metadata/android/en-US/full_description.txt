@@ -16,6 +16,13 @@ YOUR MEALS, YOUR WAY
 • Optional reminders: a gentle nudge if a meal isn't logged by the time you choose
 • Two home-screen widgets: today's calories with meal and item counts, and today's meals with every food in them. Both start fresh at midnight
 
+NEW: OPTIONAL HEALTH TRACKING
+• Turn on water, blood sugar or weight in Settings and a Health tab appears. Leave them off and nothing changes
+• Water: quick-add a glass, or any amount, against an optional daily goal
+• Blood sugar: log readings with when you took them (fasting, before or after a meal, bedtime) and see the last two weeks
+• Weight: weigh-ins with your 7 and 30 day change and a trend line
+• mg/dL or mmol/L, kg or lb, ml or fl oz
+
 YOUR FOOD LIST
 • Starts with everyday foods like roti, dal, rice, idli, poha and tea
 • Set default calories and units (piece, gram, spoon, cup)
@@ -32,7 +39,7 @@ HISTORY AND TRENDS
 • Swipe between days on the home screen, or jump to any date
 • Meals grouped by day with daily totals, filtered by meal type
 • Weekly and monthly trends: calories per day, your daily average and most-logged foods
-• NEW: Through the day. See your calories add up meal by meal, against yesterday, the same day last week or your 7-day average. Tap or drag to compare at any time
+• Through the day. See your calories add up meal by meal, against yesterday, the same day last week or your 7-day average. Tap or drag to compare at any time
 
 YOUR DATA STAYS YOURS
 • Everything stays on your phone. No account, no ads, no analytics and no internet access at all
