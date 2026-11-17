@@ -13,7 +13,7 @@ void main() {
     tester,
   ) async {
     // Tall enough to show every Settings card at once.
-    await tester.binding.setSurfaceSize(const Size(800, 1400));
+    await tester.binding.setSurfaceSize(const Size(800, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     late Repository repo;
     await pumpApp(

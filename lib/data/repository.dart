@@ -662,6 +662,64 @@ class Repository {
 
   Future<void> deleteAllMeals() => _db.delete('meals');
 
+  // ---- Health -------------------------------------------------------------
+
+  Future<List<SugarReading>> sugarReadings() async => [
+    for (final r in await _db.query('sugar_readings', orderBy: 'date, time'))
+      SugarReading.fromRow(r),
+  ];
+
+  Future<void> saveSugar(SugarReading s) =>
+      _upsert('sugar_readings', s.id, s.toRow(), updatedAt: true);
+
+  Future<void> deleteSugar(String id) =>
+      _db.delete('sugar_readings', where: 'id = ?', whereArgs: [id]);
+
+  Future<List<WaterEntry>> waterEntries() async => [
+    for (final r in await _db.query('water_entries', orderBy: 'date, time'))
+      WaterEntry.fromRow(r),
+  ];
+
+  Future<void> saveWater(WaterEntry w) =>
+      _upsert('water_entries', w.id, w.toRow());
+
+  Future<void> deleteWater(String id) =>
+      _db.delete('water_entries', where: 'id = ?', whereArgs: [id]);
+
+  Future<List<WeightEntry>> weightEntries() async => [
+    for (final r in await _db.query('weight_entries', orderBy: 'date, time'))
+      WeightEntry.fromRow(r),
+  ];
+
+  Future<void> saveWeight(WeightEntry w) =>
+      _upsert('weight_entries', w.id, w.toRow(), updatedAt: true);
+
+  Future<void> deleteWeight(String id) =>
+      _db.delete('weight_entries', where: 'id = ?', whereArgs: [id]);
+
+  /// Updates the row with [id], or inserts it if there is none.
+  Future<void> _upsert(
+    String table,
+    String id,
+    Map<String, Object?> row, {
+    bool updatedAt = false,
+  }) => _db.transaction((txn) async {
+    final now = _now;
+    final updated = await txn.update(
+      table,
+      {...row, if (updatedAt) 'updated_at': now},
+      where: 'id = ?',
+      whereArgs: [id],
+    );
+    if (updated == 0) {
+      await txn.insert(table, {
+        ...row,
+        'created_at': now,
+        if (updatedAt) 'updated_at': now,
+      });
+    }
+  });
+
   // ---- Settings -----------------------------------------------------------
 
   Future<Uint8List> snapshot() => _appDb.snapshot();

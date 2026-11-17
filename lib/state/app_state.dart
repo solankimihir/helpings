@@ -10,6 +10,7 @@ import '../data/backup_folder.dart';
 import '../data/database.dart';
 import '../data/food_csv.dart';
 import '../data/format.dart';
+import '../data/measures.dart';
 import '../data/models.dart';
 import '../data/repository.dart';
 
@@ -46,6 +47,16 @@ class AppData {
     this.remindersOn = false,
     this.aiIntroSeen = true,
     this.trendBaseline = CurveBaseline.yesterday,
+    this.sugar = const [],
+    this.water = const [],
+    this.weight = const [],
+    this.trackSugar = false,
+    this.trackWater = false,
+    this.trackWeight = false,
+    this.sugarUnit = SugarUnit.mgdl,
+    this.waterUnit = WaterUnit.ml,
+    this.weightUnit = WeightUnit.kg,
+    this.waterGoalMl,
   }) : _byId = {for (final i in items) i.id: i},
        _typeById = {for (final t in mealTypes) t.id: t};
 
@@ -103,6 +114,57 @@ class AppData {
 
   /// The "Ask an AI" walkthrough has been shown on this device.
   final bool aiIntroSeen;
+
+  // ---- Health trackers (optional) ----
+
+  /// Blood sugar readings, oldest first.
+  final List<SugarReading> sugar;
+
+  /// Water entries, oldest first.
+  final List<WaterEntry> water;
+
+  /// Weigh-ins, oldest first.
+  final List<WeightEntry> weight;
+
+  final bool trackSugar;
+  final bool trackWater;
+  final bool trackWeight;
+  final SugarUnit sugarUnit;
+  final WaterUnit waterUnit;
+  final WeightUnit weightUnit;
+
+  /// Daily water goal; null when none is set.
+  final double? waterGoalMl;
+
+  /// Whether [t] is turned on in Settings.
+  bool tracking(Tracker t) => switch (t) {
+    Tracker.sugar => trackSugar,
+    Tracker.water => trackWater,
+    Tracker.weight => trackWeight,
+  };
+
+  /// At least one tracker is on, so the Health tab shows.
+  bool get healthOn => trackSugar || trackWater || trackWeight;
+
+  /// [day]'s readings, earliest first.
+  List<SugarReading> sugarOn(String day) =>
+      sugar.where((s) => s.date == day).toList();
+
+  /// [day]'s water entries, earliest first.
+  List<WaterEntry> waterOn(String day) =>
+      water.where((w) => w.date == day).toList();
+
+  double waterTotal(String day) =>
+      waterOn(day).fold(0.0, (sum, w) => sum + w.ml);
+
+  /// The most recent weigh-in on or before [day], if any.
+  WeightEntry? weightAsOf(String day) {
+    for (final w in weight.reversed) {
+      if (w.date.compareTo(day) <= 0) return w;
+    }
+    return null;
+  }
+
   final Map<String, FoodItem> _byId;
 
   FoodItem? itemById(String? id) => id == null ? null : _byId[id];
@@ -231,6 +293,19 @@ const _kAutoLastDay = 'auto_backup_last_day';
 const _kAutoError = 'auto_backup_error';
 const _kRemindersOn = 'reminders_on';
 const _kAiIntroSeen = 'ai_intro_seen';
+const _kTrackSugar = 'track_sugar';
+const _kTrackWater = 'track_water';
+const _kTrackWeight = 'track_weight';
+const _kSugarUnit = 'sugar_unit';
+const _kWaterUnit = 'water_unit';
+const _kWeightUnit = 'weight_unit';
+const _kWaterGoal = 'water_goal_ml';
+
+String _trackKey(Tracker t) => switch (t) {
+  Tracker.sugar => _kTrackSugar,
+  Tracker.water => _kTrackWater,
+  Tracker.weight => _kTrackWeight,
+};
 
 /// Settings that describe this device rather than the user's data, so a
 /// restore from another phone (or an old file) must not overwrite them.
@@ -266,6 +341,9 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       repo.mealTypes(),
       repo.combos(),
       repo.units(),
+      repo.sugarReadings(),
+      repo.waterEntries(),
+      repo.weightEntries(),
     ]);
     final units = results[5] as List<FoodUnit>;
     final visible = units.where((u) => u.active);
@@ -289,6 +367,19 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       lastBackupAt: DateTime.tryParse(settings[_kLastBackup] ?? ''),
       remindersOn: settings[_kRemindersOn] == '1',
       aiIntroSeen: settings[_kAiIntroSeen] == '1',
+      sugar: results[6] as List<SugarReading>,
+      water: results[7] as List<WaterEntry>,
+      weight: results[8] as List<WeightEntry>,
+      trackSugar: settings[_kTrackSugar] == '1',
+      trackWater: settings[_kTrackWater] == '1',
+      trackWeight: settings[_kTrackWeight] == '1',
+      sugarUnit: SugarUnit.parse(settings[_kSugarUnit]),
+      waterUnit: WaterUnit.parse(settings[_kWaterUnit]),
+      weightUnit: WeightUnit.parse(settings[_kWeightUnit]),
+      waterGoalMl: switch (double.tryParse(settings[_kWaterGoal] ?? '')) {
+        final g? when g > 0 => g,
+        _ => null,
+      },
       autoBackup: folder == null
           ? null
           : AutoBackupStatus(
@@ -450,6 +541,41 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
 
   Future<void> setTrendBaseline(CurveBaseline b) =>
       _mutate((r) => r.setSetting(_kTrendBaseline, b.name));
+
+  // ---- Health trackers ----------------------------------------------------
+
+  /// Turning a tracker off only hides it; its entries are kept.
+  Future<void> setTracking(Tracker t, bool on) =>
+      _mutate((r) => r.setSetting(_trackKey(t), on ? '1' : null));
+
+  Future<void> setSugarUnit(SugarUnit u) =>
+      _mutate((r) => r.setSetting(_kSugarUnit, u.name));
+
+  Future<void> setWaterUnit(WaterUnit u) =>
+      _mutate((r) => r.setSetting(_kWaterUnit, u.name));
+
+  Future<void> setWeightUnit(WeightUnit u) =>
+      _mutate((r) => r.setSetting(_kWeightUnit, u.name));
+
+  /// Null or zero clears the goal.
+  Future<void> setWaterGoal(double? ml) => _mutate(
+    (r) => r.setSetting(
+      _kWaterGoal,
+      ml == null || ml <= 0 ? null : ml.toStringAsFixed(1),
+    ),
+  );
+
+  Future<void> saveSugar(SugarReading s) => _mutate((r) => r.saveSugar(s));
+
+  Future<void> deleteSugar(String id) => _mutate((r) => r.deleteSugar(id));
+
+  Future<void> saveWater(WaterEntry w) => _mutate((r) => r.saveWater(w));
+
+  Future<void> deleteWater(String id) => _mutate((r) => r.deleteWater(id));
+
+  Future<void> saveWeight(WeightEntry w) => _mutate((r) => r.saveWeight(w));
+
+  Future<void> deleteWeight(String id) => _mutate((r) => r.deleteWeight(id));
 
   /// Saves a copy of the database wherever the user picks. Returns false if
   /// they cancelled the save dialog; throws if the copy could not be made.

@@ -9,6 +9,8 @@ import '../data/csv_export.dart';
 import '../data/database.dart';
 import '../data/food_csv.dart';
 import '../data/format.dart';
+import '../data/measures.dart';
+import '../data/models.dart';
 import '../data/reminders.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
@@ -242,6 +244,11 @@ class SettingsScreen extends ConsumerWidget {
                   ),
                 ),
                 const SectionLabel(
+                  'Tracking',
+                  padding: EdgeInsets.fromLTRB(6, 22, 6, 8),
+                ),
+                _TrackingCard(data: data, row: row),
+                const SectionLabel(
                   'Food list',
                   padding: EdgeInsets.fromLTRB(6, 22, 6, 8),
                 ),
@@ -414,6 +421,16 @@ class SettingsScreen extends ConsumerWidget {
                         () => _exportCsv(context, ref),
                         divider: true,
                       ),
+                      if (data.healthOn ||
+                          data.sugar.isNotEmpty ||
+                          data.water.isNotEmpty ||
+                          data.weight.isNotEmpty)
+                        action(
+                          'Export health data (CSV)',
+                          c.link,
+                          () => _exportHealth(context, ref),
+                          divider: true,
+                        ),
                     ],
                   ),
                 ),
@@ -485,9 +502,9 @@ class SettingsScreen extends ConsumerWidget {
       context,
       title: 'Restore this backup?',
       message:
-          'Your ${plural(data.meals.length, 'meal')} and '
-          '${plural(data.items.length, 'food item')} on this device will be '
-          'replaced by the backup. '
+          'Your ${plural(data.meals.length, 'meal')}, '
+          '${plural(data.items.length, 'food item')} and health entries on '
+          'this device will be replaced by the backup. '
           '${folder != null ? 'A copy of your current data will be saved to “$folder” first.' : 'This can’t be undone, so save a copy first if you might want it back.'}',
       action: 'Restore',
     );
@@ -527,6 +544,27 @@ class SettingsScreen extends ConsumerWidget {
     } catch (e) {
       debugPrint('CSV export failed: $e');
       if (context.mounted) toast(context, "Couldn't export your meals.");
+    }
+  }
+
+  Future<void> _exportHealth(BuildContext context, WidgetRef ref) async {
+    final data = ref.read(appDataProvider).requireValue;
+    final n = data.sugar.length + data.water.length + data.weight.length;
+    if (n == 0) {
+      toast(context, 'There is no health data to export yet.');
+      return;
+    }
+    try {
+      final saved = await ref.read(csvSaverProvider)(
+        healthCsvFileName(DateTime.now()),
+        csvBytes(healthToCsv(data)),
+      );
+      if (saved && context.mounted) {
+        toast(context, 'Exported ${plural(n, 'entry', 'entries')}.');
+      }
+    } catch (e) {
+      debugPrint('Health CSV export failed: $e');
+      if (context.mounted) toast(context, "Couldn't export your health data.");
     }
   }
 
@@ -598,5 +636,142 @@ class SettingsScreen extends ConsumerWidget {
         data.visibleTypes.every((t) => t.remindMinute == null)) {
       toast(context, 'Now set a reminder time in Meal types.');
     }
+  }
+}
+
+/// Settings › Tracking: the optional health trackers, each with its unit.
+class _TrackingCard extends ConsumerWidget {
+  const _TrackingCard({required this.data, required this.row});
+  final AppData data;
+  final Widget Function({
+    required String title,
+    required String subtitle,
+    Color? subtitleColor,
+    required Widget trailing,
+    bool divider,
+  })
+  row;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.c;
+    final notifier = ref.read(appDataProvider.notifier);
+
+    Widget units<T>(
+      List<(T, String)> options,
+      T current,
+      void Function(T) set,
+    ) => Padding(
+      padding: const EdgeInsets.only(bottom: 12),
+      child: Wrap(
+        spacing: 8,
+        children: [
+          for (final (u, label) in options)
+            AppChip(label: label, selected: u == current, onTap: () => set(u)),
+        ],
+      ),
+    );
+
+    Widget toggle(Tracker t, String title, String on, String off) {
+      final count = switch (t) {
+        Tracker.sugar => data.sugar.length,
+        Tracker.water => data.water.length,
+        Tracker.weight => data.weight.length,
+      };
+      final enabled = data.tracking(t);
+      return row(
+        title: title,
+        subtitle: enabled
+            ? on
+            : count > 0
+            ? 'Off · ${plural(count, 'entry', 'entries')} kept'
+            : off,
+        divider: false,
+        trailing: Switch.adaptive(
+          value: enabled,
+          onChanged: (v) => notifier.setTracking(t, v),
+        ),
+      );
+    }
+
+    final divider = Container(height: 1, color: c.inkA(.06));
+    final goal = data.waterGoalMl;
+    final wu = data.waterUnit;
+
+    return AppCard(
+      radius: 20,
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          toggle(
+            Tracker.water,
+            'Water',
+            'Quick-add glasses on the Health tab',
+            'Log how much you drink',
+          ),
+          if (data.trackWater) ...[
+            units(
+              [for (final u in WaterUnit.values) (u, u.label)],
+              wu,
+              notifier.setWaterUnit,
+            ),
+            row(
+              title: 'Daily water goal',
+              subtitle: goal == null
+                  ? 'Optional'
+                  : '${wu.format(goal)} ${wu.label} a day',
+              divider: false,
+              trailing: Pill(
+                label: goal == null ? 'Set' : 'Change',
+                onTap: () async {
+                  final r = await promptNumberOrBlank(
+                    context,
+                    title: 'Daily water goal',
+                    action: 'Save',
+                    unit: wu.label,
+                    initial: goal == null
+                        ? null
+                        : double.parse(wu.format(goal).replaceAll(',', '')),
+                    message: 'Leave blank to have no goal.',
+                  );
+                  if (r == null) return;
+                  final v = r.$1;
+                  await notifier.setWaterGoal(
+                    v == null ? null : wu.fromDisplay(v),
+                  );
+                },
+              ),
+            ),
+          ],
+          divider,
+          toggle(
+            Tracker.sugar,
+            'Blood sugar',
+            'Readings with when they were taken',
+            'Log glucose readings',
+          ),
+          if (data.trackSugar)
+            units(
+              [for (final u in SugarUnit.values) (u, u.label)],
+              data.sugarUnit,
+              notifier.setSugarUnit,
+            ),
+          divider,
+          toggle(
+            Tracker.weight,
+            'Weight',
+            'Weigh-ins and the trend over time',
+            'Log your weight',
+          ),
+          if (data.trackWeight)
+            units(
+              [for (final u in WeightUnit.values) (u, u.label)],
+              data.weightUnit,
+              notifier.setWeightUnit,
+            ),
+        ],
+      ),
+    );
   }
 }

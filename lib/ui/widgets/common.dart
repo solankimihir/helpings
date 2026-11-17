@@ -1137,3 +1137,106 @@ class _PromptDialogState extends State<_PromptDialog> {
     ],
   );
 }
+
+/// Asks for a positive number in [unit]. Null if cancelled, blank or zero.
+Future<double?> promptNumber(
+  BuildContext context, {
+  required String title,
+  required String action,
+  required String unit,
+  double? initial,
+  String? message,
+}) async => (await promptNumberOrBlank(
+  context,
+  title: title,
+  action: action,
+  unit: unit,
+  initial: initial,
+  message: message,
+))?.$1;
+
+/// Like [promptNumber], but tells cancelling (null) apart from leaving the
+/// field blank or zero (`(null,)`), e.g. to clear a goal.
+Future<(double?,)?> promptNumberOrBlank(
+  BuildContext context, {
+  required String title,
+  required String action,
+  required String unit,
+  double? initial,
+  String? message,
+}) async {
+  final r = await showDialog<String>(
+    context: context,
+    builder: (_) => _NumberDialog(
+      title: title,
+      action: action,
+      unit: unit,
+      initial: initial == null ? '' : fmtQty(initial),
+      message: message,
+    ),
+  );
+  if (r == null) return null;
+  final v = parseNum(r);
+  return (v == null || v <= 0 ? null : v,);
+}
+
+class _NumberDialog extends StatefulWidget {
+  const _NumberDialog({
+    required this.title,
+    required this.action,
+    required this.unit,
+    required this.initial,
+    this.message,
+  });
+  final String title;
+  final String action;
+  final String unit;
+  final String initial;
+  final String? message;
+
+  @override
+  State<_NumberDialog> createState() => _NumberDialogState();
+}
+
+class _NumberDialogState extends State<_NumberDialog> {
+  late final _controller = TextEditingController(text: widget.initial);
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => AlertDialog(
+    title: Text(widget.title),
+    content: Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.message != null) ...[
+          Text(widget.message!),
+          const SizedBox(height: 8),
+        ],
+        TextField(
+          controller: _controller,
+          autofocus: true,
+          keyboardType: const TextInputType.numberWithOptions(decimal: true),
+          inputFormatters: decimalOnly,
+          decoration: InputDecoration(suffixText: widget.unit),
+          onSubmitted: (v) => Navigator.pop(context, v),
+        ),
+      ],
+    ),
+    actions: [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      TextButton(
+        onPressed: () => Navigator.pop(context, _controller.text),
+        child: Text(widget.action),
+      ),
+    ],
+  );
+}

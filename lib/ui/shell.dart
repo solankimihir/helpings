@@ -5,6 +5,7 @@ import 'package:material_ui/material_ui.dart';
 
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
+import 'health_screen.dart';
 import 'history_screen.dart';
 import 'home_screen.dart';
 import 'items_screen.dart';
@@ -16,6 +17,7 @@ import 'widgets/tab_icons.dart';
 enum AppTab {
   home('Home', TabGlyph.home),
   history('History', TabGlyph.history),
+  health('Health', TabGlyph.health),
   items('Meal Items', TabGlyph.items),
   settings('Settings', TabGlyph.settings);
 
@@ -43,9 +45,23 @@ class Shell extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final tab = ref.watch(currentTabProvider);
+    final selected = ref.watch(currentTabProvider);
     final data = ref.watch(appDataProvider);
     final c = context.c;
+    final healthOn = data.value?.healthOn ?? false;
+    // The Health tab only exists while a tracker is on; leave it when the
+    // last one is turned off.
+    ref.listen(appDataProvider, (_, next) {
+      if (next.value?.healthOn == false &&
+          ref.read(currentTabProvider) == AppTab.health) {
+        ref.read(currentTabProvider.notifier).select(AppTab.home);
+      }
+    });
+    final tab = selected == AppTab.health && !healthOn ? AppTab.home : selected;
+    final tabs = [
+      for (final t in AppTab.values)
+        if (t != AppTab.health || healthOn) t,
+    ];
 
     final body = switch (data) {
       AsyncData() => IndexedStack(
@@ -53,6 +69,7 @@ class Shell extends ConsumerWidget {
         children: const [
           HomeScreen(),
           HistoryScreen(),
+          HealthScreen(),
           ItemsScreen(),
           SettingsScreen(),
         ],
@@ -91,6 +108,7 @@ class Shell extends ConsumerWidget {
               ),
             ),
           _TabBar(
+            tabs: tabs,
             current: tab,
             onSelect: (t) => ref.read(currentTabProvider.notifier).select(t),
           ),
@@ -142,7 +160,12 @@ class _AddMealButton extends StatelessWidget {
 }
 
 class _TabBar extends StatelessWidget {
-  const _TabBar({required this.current, required this.onSelect});
+  const _TabBar({
+    required this.tabs,
+    required this.current,
+    required this.onSelect,
+  });
+  final List<AppTab> tabs;
   final AppTab current;
   final ValueChanged<AppTab> onSelect;
 
@@ -161,7 +184,7 @@ class _TabBar extends StatelessWidget {
           padding: EdgeInsets.fromLTRB(6, 8, 6, bottom > 0 ? bottom : 12),
           child: Row(
             children: [
-              for (final t in AppTab.values)
+              for (final t in tabs)
                 Expanded(
                   child: Semantics(
                     selected: t == current,

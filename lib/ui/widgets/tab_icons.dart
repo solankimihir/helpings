@@ -1,6 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
-enum TabGlyph { home, history, items, settings }
+enum TabGlyph { home, history, health, items, settings }
 
 /// Line icons drawn from the design's 20×20 SVGs.
 class TabIcon extends StatelessWidget {
@@ -51,6 +51,19 @@ class _TabIconPainter extends CustomPainter {
             ..moveTo(10, 6)
             ..lineTo(10, 10.3)
             ..lineTo(13, 12),
+          p,
+        );
+      case TabGlyph.health:
+        canvas.drawPath(
+          Path()
+            ..moveTo(10, 16.4)
+            ..cubicTo(5, 13, 2.8, 10.3, 2.8, 7.4)
+            ..cubicTo(2.8, 5.2, 4.5, 3.6, 6.5, 3.6)
+            ..cubicTo(8, 3.6, 9.2, 4.4, 10, 5.7)
+            ..cubicTo(10.8, 4.4, 12, 3.6, 13.5, 3.6)
+            ..cubicTo(15.5, 3.6, 17.2, 5.2, 17.2, 7.4)
+            ..cubicTo(17.2, 10.3, 15, 13, 10, 16.4)
+            ..close(),
           p,
         );
       case TabGlyph.items:

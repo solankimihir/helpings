@@ -28,6 +28,12 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.chipOnFg,
     required this.scrim,
     required this.shadow,
+    required this.water,
+    required this.waterTint,
+    required this.sugar,
+    required this.sugarTint,
+    required this.weight,
+    required this.weightTint,
   });
 
   final Color bg; // #F7F5F0 page background
@@ -53,6 +59,14 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color chipOnFg;
   final Color scrim;
   final Color shadow;
+
+  // Health trackers: a hue each, plus a pale tint for fills.
+  final Color water;
+  final Color waterTint;
+  final Color sugar;
+  final Color sugarTint;
+  final Color weight;
+  final Color weightTint;
 
   /// Ink at the given opacity — the design uses rgba(23,32,28,x) everywhere.
   Color inkA(double opacity) => ink.withValues(alpha: opacity);
@@ -81,6 +95,12 @@ class AppColors extends ThemeExtension<AppColors> {
     chipOnFg: Color(0xFFFFFFFF),
     scrim: Color(0x5217201C),
     shadow: Color(0xFF17201C),
+    water: Color(0xFF2F7DB5),
+    waterTint: Color(0xFFDDEDF8),
+    sugar: Color(0xFFAD4777),
+    sugarTint: Color(0xFFF7E2EB),
+    weight: Color(0xFF6656B0),
+    weightTint: Color(0xFFE7E3F7),
   );
 
   static const dark = AppColors(
@@ -107,6 +127,12 @@ class AppColors extends ThemeExtension<AppColors> {
     chipOnFg: Color(0xFF111614),
     scrim: Color(0x99000000),
     shadow: Color(0xFF000000),
+    water: Color(0xFF6DB3E4),
+    waterTint: Color(0xFF1A2E3C),
+    sugar: Color(0xFFE48BB5),
+    sugarTint: Color(0xFF3A2330),
+    weight: Color(0xFFA89BEA),
+    weightTint: Color(0xFF29253F),
   );
 
   @override
@@ -140,6 +166,12 @@ class AppColors extends ThemeExtension<AppColors> {
       chipOnFg: l(chipOnFg, other.chipOnFg),
       scrim: l(scrim, other.scrim),
       shadow: l(shadow, other.shadow),
+      water: l(water, other.water),
+      waterTint: l(waterTint, other.waterTint),
+      sugar: l(sugar, other.sugar),
+      sugarTint: l(sugarTint, other.sugarTint),
+      weight: l(weight, other.weight),
+      weightTint: l(weightTint, other.weightTint),
     );
   }
 }

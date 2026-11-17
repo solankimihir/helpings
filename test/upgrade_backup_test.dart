@@ -24,6 +24,9 @@ void main() {
       await Repository(db).setSetting('auto_backup_folder_name', 'Backups');
     }
     await db.db.execute('DROP TABLE units');
+    for (final t in AppDatabase.healthTables) {
+      await db.db.execute('DROP TABLE $t'); // added in v7
+    }
     await db.db.setVersion(5);
     await db.close();
     return path;

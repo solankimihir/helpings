@@ -8,6 +8,7 @@ import '../theme/app_theme.dart';
 import 'meal_detail_screen.dart';
 import 'shell.dart';
 import 'widgets/common.dart';
+import 'widgets/day_header.dart';
 import 'widgets/meal_card.dart';
 
 /// Which day Home shows, as days before today (0 = today). Shared with the
@@ -76,91 +77,18 @@ class _HomeScreenState extends ConsumerState<HomeScreen> {
         _pages.jumpToPage(day);
       }
     });
-    final c = context.c;
     final offset = ref.watch(homeDayProvider);
     final key = shiftKey(-offset);
-    final date = parseKey(key);
-    final overlineText = switch (offset) {
-      0 => 'TODAY',
-      1 => 'YESTERDAY',
-      _ when date.year != DateTime.now().year => '${date.year}',
-      _ => '$offset DAYS AGO',
-    };
 
     return SafeArea(
       bottom: false,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Padding(
-            padding: const EdgeInsets.fromLTRB(22, 12, 16, 10),
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                Expanded(
-                  child: Semantics(
-                    button: true,
-                    label: 'Choose a day',
-                    child: GestureDetector(
-                      behavior: HitTestBehavior.opaque,
-                      onTap: () => _pick(key),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            overlineText,
-                            style: overline(context, spacing: .14),
-                          ),
-                          const SizedBox(height: 4),
-                          Row(
-                            children: [
-                              // Long dates ("Wednesday, September 30")
-                              // shrink to stay on one line rather than wrap.
-                              Flexible(
-                                child: FittedBox(
-                                  fit: BoxFit.scaleDown,
-                                  alignment: Alignment.centerLeft,
-                                  child: Text(
-                                    longDate(date),
-                                    maxLines: 1,
-                                    style: serif(
-                                      34,
-                                      color: c.ink,
-                                      height: 1.08,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              Icon(
-                                Icons.expand_more_rounded,
-                                size: 22,
-                                color: c.inkA(.35),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                ),
-                if (offset > 0) ...[
-                  const SizedBox(width: 8),
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 4),
-                    child: Pill(
-                      label: 'Today',
-                      fontSize: 13,
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 13,
-                        vertical: 7,
-                      ),
-                      onTap: () => _goTo(0),
-                    ),
-                  ),
-                ],
-              ],
-            ),
+          DayHeader(
+            daysAgo: offset,
+            onPick: () => _pick(key),
+            onToday: () => _goTo(0),
           ),
           Expanded(
             child: PageView.builder(

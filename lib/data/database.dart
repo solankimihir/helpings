@@ -15,7 +15,7 @@ class AppDatabase {
   final Database db;
   final DatabaseFactory _factory;
 
-  static const version = 6;
+  static const version = 7;
   static const fileName = 'helpings.db';
 
   /// Opens (creating on first launch) the on-device database.
@@ -123,7 +123,17 @@ class AppDatabase {
     'meal_entries',
     'combos',
     'combo_items',
+    'sugar_readings',
+    'water_entries',
+    'weight_entries',
     'settings',
+  ];
+
+  /// Tables added in schema v7, for the optional health trackers.
+  static const healthTables = [
+    'sugar_readings',
+    'water_entries',
+    'weight_entries',
   ];
 
   /// Tables every Helpings backup has, back to schema v1. Later tables are
@@ -327,6 +337,47 @@ class AppDatabase {
           created_at INTEGER NOT NULL
         )''');
       await insertDefaultUnits(db);
+    }
+    if (from < 7) {
+      // Optional health trackers. Canonical units: mg/dL, ml, kg.
+      await db.execute('''
+        CREATE TABLE sugar_readings (
+          id TEXT PRIMARY KEY,
+          date TEXT NOT NULL,
+          time TEXT NOT NULL,
+          mgdl REAL NOT NULL,
+          context TEXT NOT NULL,
+          note TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )''');
+      await db.execute(
+        'CREATE INDEX idx_sugar_date ON sugar_readings(date, time)',
+      );
+      await db.execute('''
+        CREATE TABLE water_entries (
+          id TEXT PRIMARY KEY,
+          date TEXT NOT NULL,
+          time TEXT NOT NULL,
+          ml REAL NOT NULL,
+          created_at INTEGER NOT NULL
+        )''');
+      await db.execute(
+        'CREATE INDEX idx_water_date ON water_entries(date, time)',
+      );
+      await db.execute('''
+        CREATE TABLE weight_entries (
+          id TEXT PRIMARY KEY,
+          date TEXT NOT NULL,
+          time TEXT NOT NULL,
+          kg REAL NOT NULL,
+          note TEXT,
+          created_at INTEGER NOT NULL,
+          updated_at INTEGER NOT NULL
+        )''');
+      await db.execute(
+        'CREATE INDEX idx_weight_date ON weight_entries(date, time)',
+      );
     }
   }
 

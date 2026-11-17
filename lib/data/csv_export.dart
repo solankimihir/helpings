@@ -45,6 +45,46 @@ String mealsToCsv(AppData data) {
   return '${rows.map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n';
 }
 
+const healthCsvHeader = [
+  'Date',
+  'Time',
+  'Type',
+  'Value',
+  'Unit',
+  'Context',
+  'Note',
+];
+
+/// Every health entry, oldest first, in canonical units (mg/dL, ml, kg) so
+/// a file reads the same whatever the display settings.
+String healthToCsv(AppData data) {
+  final rows = <(String, List<String>)>[
+    for (final s in data.sugar)
+      (
+        s.sortKey,
+        [
+          s.date,
+          s.time,
+          'Blood sugar',
+          fmtNum(s.mgdl),
+          'mg/dL',
+          s.context.label,
+          s.note,
+        ],
+      ),
+    for (final w in data.water)
+      (w.sortKey, [w.date, w.time, 'Water', fmtNum(w.ml), 'ml', '', '']),
+    for (final w in data.weight)
+      (w.sortKey, [w.date, w.time, 'Weight', fmtNum(w.kg), 'kg', '', w.note]),
+  ]..sort((a, b) => a.$1.compareTo(b.$1));
+  final all = [healthCsvHeader, for (final r in rows) r.$2];
+  return '${all.map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n';
+}
+
+/// Up to two decimals, without trailing zeros.
+String fmtNum(double v) =>
+    v.toStringAsFixed(2).replaceFirst(RegExp(r'\.?0+$'), '');
+
 /// One RFC 4180 field: quoted only when it has to be.
 String csvCell(String v) =>
     v.contains(RegExp(r'[",\r\n]')) ? '"${v.replaceAll('"', '""')}"' : v;
@@ -55,6 +95,9 @@ Uint8List csvBytes(String csv) =>
 
 /// e.g. `helpings-meals-2026-11-13.csv`
 String csvFileName(DateTime t) => 'helpings-meals-${dayKey(t)}.csv';
+
+/// e.g. `helpings-health-2026-11-13.csv`
+String healthCsvFileName(DateTime t) => 'helpings-health-${dayKey(t)}.csv';
 
 /// Opens the system "Save as" dialog. Returns false if cancelled.
 /// Overridden in tests.

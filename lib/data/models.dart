@@ -424,3 +424,162 @@ enum CurveBaseline {
   /// The average of the 7 most recent days with meals before it.
   average7,
 }
+
+// ---- Health trackers --------------------------------------------------------
+// Optional; each is turned on in Settings. Values are stored in canonical
+// units (mg/dL, ml, kg) and converted for display (see measures.dart).
+
+/// When a blood sugar reading was taken, relative to food and sleep.
+enum SugarContext {
+  fasting('Fasting'),
+  beforeMeal('Before meal'),
+  afterMeal('After meal'),
+  bedtime('Bedtime'),
+  other('Other');
+
+  const SugarContext(this.label);
+  final String label;
+
+  static SugarContext parse(String? v) =>
+      values.firstWhere((c) => c.name == v, orElse: () => other);
+}
+
+@immutable
+class SugarReading {
+  const SugarReading({
+    required this.id,
+    required this.date,
+    required this.time,
+    required this.mgdl,
+    this.context = SugarContext.other,
+    this.note = '',
+  });
+
+  final String id;
+
+  /// Local calendar day, `YYYY-MM-DD`.
+  final String date;
+
+  /// 24h local time, `HH:mm`.
+  final String time;
+  final double mgdl;
+  final SugarContext context;
+  final String note;
+
+  String get sortKey => '$date $time';
+
+  Map<String, Object?> toRow() => {
+    'id': id,
+    'date': date,
+    'time': time,
+    'mgdl': mgdl,
+    'context': context.name,
+    'note': note.isEmpty ? null : note,
+  };
+
+  factory SugarReading.fromRow(Map<String, Object?> r) => SugarReading(
+    id: r['id'] as String,
+    date: r['date'] as String,
+    time: r['time'] as String,
+    mgdl: (r['mgdl'] as num).toDouble(),
+    context: SugarContext.parse(r['context'] as String?),
+    note: (r['note'] as String?) ?? '',
+  );
+
+  SugarReading copyWith({
+    String? date,
+    String? time,
+    double? mgdl,
+    SugarContext? context,
+    String? note,
+  }) => SugarReading(
+    id: id,
+    date: date ?? this.date,
+    time: time ?? this.time,
+    mgdl: mgdl ?? this.mgdl,
+    context: context ?? this.context,
+    note: note ?? this.note,
+  );
+}
+
+@immutable
+class WaterEntry {
+  const WaterEntry({
+    required this.id,
+    required this.date,
+    required this.time,
+    required this.ml,
+  });
+
+  final String id;
+  final String date;
+  final String time;
+  final double ml;
+
+  String get sortKey => '$date $time';
+
+  Map<String, Object?> toRow() => {
+    'id': id,
+    'date': date,
+    'time': time,
+    'ml': ml,
+  };
+
+  factory WaterEntry.fromRow(Map<String, Object?> r) => WaterEntry(
+    id: r['id'] as String,
+    date: r['date'] as String,
+    time: r['time'] as String,
+    ml: (r['ml'] as num).toDouble(),
+  );
+}
+
+@immutable
+class WeightEntry {
+  const WeightEntry({
+    required this.id,
+    required this.date,
+    required this.time,
+    required this.kg,
+    this.note = '',
+  });
+
+  final String id;
+  final String date;
+  final String time;
+  final double kg;
+  final String note;
+
+  String get sortKey => '$date $time';
+
+  Map<String, Object?> toRow() => {
+    'id': id,
+    'date': date,
+    'time': time,
+    'kg': kg,
+    'note': note.isEmpty ? null : note,
+  };
+
+  factory WeightEntry.fromRow(Map<String, Object?> r) => WeightEntry(
+    id: r['id'] as String,
+    date: r['date'] as String,
+    time: r['time'] as String,
+    kg: (r['kg'] as num).toDouble(),
+    note: (r['note'] as String?) ?? '',
+  );
+
+  WeightEntry copyWith({
+    String? date,
+    String? time,
+    double? kg,
+    String? note,
+  }) => WeightEntry(
+    id: id,
+    date: date ?? this.date,
+    time: time ?? this.time,
+    kg: kg ?? this.kg,
+    note: note ?? this.note,
+  );
+}
+
+/// Which optional tracker a setting is about.
+enum Tracker { sugar, water, weight }
