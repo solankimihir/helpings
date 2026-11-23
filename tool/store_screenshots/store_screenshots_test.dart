@@ -742,17 +742,20 @@ void main() {
       tester,
       show: () async {
         await tap(tester, find.text('Health'));
-        // Water's total and buttons at the top, then sugar and weight.
-        await tester.drag(find.byType(ListView).last, const Offset(0, -330));
+        // Scrolled to the end: the weight trend, then the period card.
+        await tester.drag(find.byType(ListView).last, const Offset(0, -3000));
+        await tester.pumpAndSettle();
+        // Back a little so the weight card's title shows.
+        await tester.drag(find.byType(ListView).last, const Offset(0, 46));
         await tester.pumpAndSettle();
       },
     );
     await _write(
       tester,
       _Shot(
-        line1: 'Water, sugar',
-        line2: 'and weight too',
-        subtitle: 'Optional trackers, each off until you want it',
+        line1: 'Your cycle,',
+        line2: 'weight and more',
+        subtitle: 'Optional water, sugar, weight and period tracking',
         screen: health,
       ),
       const Size(1080, 1920),
