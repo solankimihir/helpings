@@ -166,8 +166,13 @@ Future<void> _seed(Repository r) async {
     'other',
   ]);
 
-  // Health trackers: all three on, with a few weeks of entries.
-  for (final t in ['track_water', 'track_sugar', 'track_weight']) {
+  // Health trackers: all four on, with a few weeks of entries.
+  for (final t in [
+    'track_water',
+    'track_sugar',
+    'track_weight',
+    'track_period',
+  ]) {
     await r.setSetting(t, '1');
   }
   await r.setSetting('water_goal_ml', '2500');
@@ -228,6 +233,13 @@ Future<void> _seed(Repository r) async {
         kg: double.parse((72.4 + d * .03 + wobble).toStringAsFixed(1)),
       ),
     );
+  }
+
+  // Three periods, the latest 15 days ago: cycles of 29 and 28 days.
+  for (final (ago, len) in [(72, 5), (43, 4), (15, 5)]) {
+    await r.setPeriodDays([
+      for (var i = 0; i < len; i++) shiftKey(-ago + i),
+    ], true);
   }
 
   // Settings: reminders and daily backup on, already backed up today.

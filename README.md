@@ -27,7 +27,7 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
   <img src="docs/readme/screens/1_home.png" width="200" alt="Home: today's calories and meals">
   <img src="docs/readme/screens/2_add.png" width="200" alt="Add a meal with combos">
   <img src="docs/readme/screens/3_trends.png" width="200" alt="Trends: calories through the day against your 7-day average">
-  <img src="docs/readme/screens/5_health.png" width="200" alt="Health: optional water, blood sugar and weight tracking">
+  <img src="docs/readme/screens/5_health.png" width="200" alt="Health: optional water, blood sugar, weight and period tracking">
   <img src="docs/readme/screens/7_items.png" width="200" alt="Your food list">
   <img src="docs/readme/screens/8_ask_ai.png" width="200" alt="Ask an AI to build your food list or fill in missing calories">
 </p>
@@ -53,9 +53,9 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
   tap or drag to read both at any time.
 
 **Health tracking (optional)**
-- Water, blood sugar and weight, each off until you turn it on in Settings ›
-  Tracking. A Health tab appears while any of them is on; turning one off
-  hides it and keeps its entries.
+- Water, blood sugar, weight and period, each off until you turn it on in
+  Settings › Tracking. A Health tab appears while any of them is on; turning
+  one off hides it and keeps its entries.
 - Water: quick-add 250 / 500 ml (or 8 / 16 fl oz) or any amount, with an
   optional daily goal shown as a ring, and the last 7 days as bars.
 - Blood sugar: readings with the time and when they were taken (fasting,
@@ -63,6 +63,11 @@ Website and privacy policy: <https://helpings.mihirsolanki.in>
   Values are shown as entered, never labelled high or low.
 - Weight: weigh-ins with the change over 7 and 30 days, and a 30 or 90 day
   trend line.
+- Period: tap days on a month calendar to log them (one forgotten day doesn't
+  split a period). The card shows the cycle day and when the next period is
+  likely, from the average of the last 6 cycles (cycles under 15 or over 60
+  days are left out). There are no fertility or ovulation estimates. Past
+  periods are listed with their length and cycle.
 - Units: mg/dL or mmol/L, kg or lb, ml or fl oz. Values are stored in mg/dL,
   kg and ml, so switching units never changes what was logged.
 

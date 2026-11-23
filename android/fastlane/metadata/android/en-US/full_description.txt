@@ -16,11 +16,12 @@ YOUR MEALS, YOUR WAY
 • Optional reminders: a gentle nudge if a meal isn't logged by the time you choose
 • Two home-screen widgets: today's calories with meal and item counts, and today's meals with every food in them. Both start fresh at midnight
 
-NEW: OPTIONAL HEALTH TRACKING
-• Turn on water, blood sugar or weight in Settings and a Health tab appears. Leave them off and nothing changes
+OPTIONAL HEALTH TRACKING
+• Turn on water, blood sugar, weight or period tracking in Settings and a Health tab appears. Leave them off and nothing changes
 • Water: quick-add a glass, or any amount, against an optional daily goal
 • Blood sugar: log readings with when you took them (fasting, before or after a meal, bedtime) and see the last two weeks
 • Weight: weigh-ins with your 7 and 30 day change and a trend line
+• NEW: Period: tap days on a calendar to log them, see your cycle day, average cycle and when your next period is likely
 • mg/dL or mmol/L, kg or lb, ml or fl oz
 
 YOUR FOOD LIST

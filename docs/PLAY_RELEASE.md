@@ -45,7 +45,7 @@ Play Console → **Create app**
 | Data safety | See below |
 | Government app | No |
 | Financial features | My app doesn't provide any financial features |
-| Health apps | Select **Nutrition and weight management** (meal / calorie logging, optional weight and water tracking). Since 1.1.2 the app also logs optional blood sugar readings, so also consider **Disease and condition management**. Not a medical device; it shows values only and gives no medical advice. |
+| Health apps | Select **Nutrition and weight management** (meal / calorie logging, optional weight and water tracking). Since 1.1.2 the app also logs optional blood sugar readings, so also consider **Disease and condition management**. Since 1.1.3 it also has optional period tracking, so also tick the women's / reproductive health (period or menstrual tracking) category, whatever Play Console calls it now. It gives no fertility or contraception estimates. Not a medical device; it shows values only and gives no medical advice. |
 | App category | **Health & Fitness** · Tags: Nutrition, Diet, Calorie counter (pick what's offered) |
 | Store contact | Email `support@mihirsolanki.in`; website `https://mihirsolanki.in` (optional) |
 
@@ -55,7 +55,8 @@ Play Console → **Create app**
   (all data stays on device; the app has no internet permission. Data in the
   user's own Android backup is not considered collection by Google.) This
   still holds for the optional health trackers (1.1.2): water, blood sugar
-  and weight never leave the device either.
+  and weight never leave the device either. The same goes for period days
+  (1.1.3).
 
 Answering **No** skips the encryption and deletion-request questions; the
 listing then shows "No data collected · No data shared".

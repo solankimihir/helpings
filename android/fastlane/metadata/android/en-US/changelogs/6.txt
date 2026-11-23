@@ -1,0 +1,1 @@
+New, and optional: period tracking. Turn it on in Settings › Tracking and the Health tab shows your cycle day and when your next period is likely, from your own past cycles. Tap days on a calendar to log them, and see each period's length and cycle in the history. It stays on your phone, is included in backups and can be exported as CSV.
