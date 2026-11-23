@@ -697,6 +697,29 @@ class Repository {
   Future<void> deleteWeight(String id) =>
       _db.delete('weight_entries', where: 'id = ?', whereArgs: [id]);
 
+  /// Days logged as period days, `YYYY-MM-DD`, oldest first.
+  Future<List<String>> periodDays() async => [
+    for (final r in await _db.query('period_days', orderBy: 'date'))
+      r['date'] as String,
+  ];
+
+  /// Logs (or, with [on] false, un-logs) each of [dates] as a period day.
+  Future<void> setPeriodDays(Iterable<String> dates, bool on) async {
+    final b = _db.batch();
+    final now = _now;
+    for (final d in dates) {
+      if (on) {
+        b.insert('period_days', {
+          'date': d,
+          'created_at': now,
+        }, conflictAlgorithm: ConflictAlgorithm.ignore);
+      } else {
+        b.delete('period_days', where: 'date = ?', whereArgs: [d]);
+      }
+    }
+    await b.commit(noResult: true);
+  }
+
   /// Updates the row with [id], or inserts it if there is none.
   Future<void> _upsert(
     String table,

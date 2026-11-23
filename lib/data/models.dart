@@ -582,4 +582,4 @@ class WeightEntry {
 }
 
 /// Which optional tracker a setting is about.
-enum Tracker { sugar, water, weight }
+enum Tracker { sugar, water, weight, period }

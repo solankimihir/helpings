@@ -56,7 +56,8 @@ const healthCsvHeader = [
 ];
 
 /// Every health entry, oldest first, in canonical units (mg/dL, ml, kg) so
-/// a file reads the same whatever the display settings.
+/// a file reads the same whatever the display settings. Periods are one row
+/// each, dated by their first day.
 String healthToCsv(AppData data) {
   final rows = <(String, List<String>)>[
     for (final s in data.sugar)
@@ -76,6 +77,9 @@ String healthToCsv(AppData data) {
       (w.sortKey, [w.date, w.time, 'Water', fmtNum(w.ml), 'ml', '', '']),
     for (final w in data.weight)
       (w.sortKey, [w.date, w.time, 'Weight', fmtNum(w.kg), 'kg', '', w.note]),
+    // One row per period: the start day and its length.
+    for (final p in data.periods)
+      ('${p.start} ', [p.start, '', 'Period', '${p.length}', 'days', '', '']),
   ]..sort((a, b) => a.$1.compareTo(b.$1));
   final all = [healthCsvHeader, for (final r in rows) r.$2];
   return '${all.map((r) => r.map(csvCell).join(',')).join('\r\n')}\r\n';

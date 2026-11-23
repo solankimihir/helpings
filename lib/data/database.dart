@@ -15,7 +15,7 @@ class AppDatabase {
   final Database db;
   final DatabaseFactory _factory;
 
-  static const version = 7;
+  static const version = 8;
   static const fileName = 'helpings.db';
 
   /// Opens (creating on first launch) the on-device database.
@@ -126,14 +126,17 @@ class AppDatabase {
     'sugar_readings',
     'water_entries',
     'weight_entries',
+    'period_days',
     'settings',
   ];
 
-  /// Tables added in schema v7, for the optional health trackers.
+  /// Tables for the optional health trackers: added in schema v7, plus
+  /// `period_days` in v8.
   static const healthTables = [
     'sugar_readings',
     'water_entries',
     'weight_entries',
+    'period_days',
   ];
 
   /// Tables every Helpings backup has, back to schema v1. Later tables are
@@ -378,6 +381,14 @@ class AppDatabase {
       await db.execute(
         'CREATE INDEX idx_weight_date ON weight_entries(date, time)',
       );
+    }
+    if (from < 8) {
+      // Optional period tracking: one row per day logged as a period day.
+      await db.execute('''
+        CREATE TABLE period_days (
+          date TEXT PRIMARY KEY,
+          created_at INTEGER NOT NULL
+        )''');
     }
   }
 

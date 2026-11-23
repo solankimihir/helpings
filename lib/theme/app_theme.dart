@@ -34,6 +34,8 @@ class AppColors extends ThemeExtension<AppColors> {
     required this.sugarTint,
     required this.weight,
     required this.weightTint,
+    required this.period,
+    required this.periodTint,
   });
 
   final Color bg; // #F7F5F0 page background
@@ -67,6 +69,8 @@ class AppColors extends ThemeExtension<AppColors> {
   final Color sugarTint;
   final Color weight;
   final Color weightTint;
+  final Color period;
+  final Color periodTint;
 
   /// Ink at the given opacity — the design uses rgba(23,32,28,x) everywhere.
   Color inkA(double opacity) => ink.withValues(alpha: opacity);
@@ -101,6 +105,8 @@ class AppColors extends ThemeExtension<AppColors> {
     sugarTint: Color(0xFFF7E2EB),
     weight: Color(0xFF6656B0),
     weightTint: Color(0xFFE7E3F7),
+    period: Color(0xFFC23B5A),
+    periodTint: Color(0xFFFBE1E6),
   );
 
   static const dark = AppColors(
@@ -133,6 +139,8 @@ class AppColors extends ThemeExtension<AppColors> {
     sugarTint: Color(0xFF3A2330),
     weight: Color(0xFFA89BEA),
     weightTint: Color(0xFF29253F),
+    period: Color(0xFFF2879C),
+    periodTint: Color(0xFF3E2229),
   );
 
   @override
@@ -172,6 +180,8 @@ class AppColors extends ThemeExtension<AppColors> {
       sugarTint: l(sugarTint, other.sugarTint),
       weight: l(weight, other.weight),
       weightTint: l(weightTint, other.weightTint),
+      period: l(period, other.period),
+      periodTint: l(periodTint, other.periodTint),
     );
   }
 }

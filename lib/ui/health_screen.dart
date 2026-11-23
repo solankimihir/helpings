@@ -9,6 +9,7 @@ import '../data/models.dart';
 import '../state/app_state.dart';
 import '../theme/app_theme.dart';
 import 'health_sheets.dart';
+import 'period_calendar_screen.dart';
 import 'shell.dart';
 import 'widgets/common.dart';
 import 'widgets/day_header.dart';
@@ -113,6 +114,7 @@ class _HealthDayView extends ConsumerWidget {
         if (data.trackWater) _WaterCard(day: day, data: data),
         if (data.trackSugar) _SugarCard(day: day, data: data),
         if (data.trackWeight) _WeightCard(day: day, data: data),
+        if (data.trackPeriod) _PeriodCard(day: day, data: data),
       ],
     );
   }
@@ -686,6 +688,112 @@ class _WeightCardState extends State<_WeightCard> {
                 style: sans(13, color: c.inkA(.5)),
               ),
           ],
+        ],
+      ),
+    );
+  }
+}
+
+// ---- Period ----------------------------------------------------------------
+
+final _monthDay = DateFormat('MMM d', 'en_US');
+
+/// "Next period in about 12 days · Dec 5", "Late by 2 days", or a logged
+/// start; null when there's nothing to say yet.
+String? periodOutlook(AppData data, String day) {
+  final st = data.cycleOn(day);
+  final next = st.nextStart;
+  if (next == null) return null;
+  if (!st.nextPredicted) {
+    return 'Next period started ${_monthDay.format(parseKey(next))}';
+  }
+  final n = st.daysUntilNext(day)!;
+  if (n < 0) return st.onPeriod ? null : 'Late by ${plural(-n, 'day')}';
+  final when = _monthDay.format(parseKey(next));
+  return switch (n) {
+    0 => 'Next period expected today',
+    1 => 'Next period expected tomorrow · $when',
+    _ => 'Next period in about $n days · $when',
+  };
+}
+
+class _PeriodCard extends ConsumerWidget {
+  const _PeriodCard({required this.day, required this.data});
+  final String day;
+  final AppData data;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final c = context.c;
+    final notifier = ref.read(appDataProvider.notifier);
+    final st = data.cycleOn(day);
+    final logged = data.periodDays.contains(day);
+    final outlook = periodOutlook(data, day);
+    final muted = sans(13.5, color: c.inkA(.5));
+
+    return _TrackerCard(
+      title: 'Period',
+      color: c.period,
+      trailing: logged
+          ? Pill(
+              label: 'Logged ✓',
+              onTap: () => notifier.setPeriodDays([day], false),
+              color: c.period,
+              fontSize: 13,
+              padding: const EdgeInsets.symmetric(horizontal: 13, vertical: 7),
+            )
+          : _addPill(
+              st.onPeriod ? 'Log this day' : 'Period started',
+              () => notifier.setPeriodDays([day], true),
+            ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (data.periods.isEmpty)
+            Text(
+              'No periods logged yet. Tap “Period started” on the first day.',
+              style: muted,
+            )
+          else if (st.cycleDay == null)
+            Text('No period logged by this day.', style: muted)
+          else ...[
+            _bigValue(
+              context,
+              'Day ${st.periodDay ?? st.cycleDay}',
+              st.onPeriod ? 'of period' : 'of cycle',
+            ),
+            if (outlook != null || data.cycleStats == null) ...[
+              const SizedBox(height: 2),
+              Text(
+                outlook ?? 'Log two periods to see when the next is likely.',
+                style: sans(
+                  13,
+                  color: outlook?.startsWith('Late') ?? false
+                      ? c.period
+                      : c.inkA(.55),
+                ),
+              ),
+            ],
+          ],
+          const SizedBox(height: 12),
+          Tap(
+            onTap: () => openPeriodCalendar(context),
+            color: c.periodTint,
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+            semanticLabel: 'Period calendar',
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.calendar_month_rounded, size: 16, color: c.period),
+                const SizedBox(width: 6),
+                Text(
+                  'Calendar & history',
+                  style: sans(12.5, weight: FontWeight.w500, color: c.ink),
+                ),
+                Icon(Icons.chevron_right_rounded, size: 16, color: c.inkA(.5)),
+              ],
+            ),
+          ),
         ],
       ),
     );

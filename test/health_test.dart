@@ -36,7 +36,7 @@ void main() {
 
       final up = await AppDatabase.open(factory: f, path: path);
       addTearDown(up.close);
-      expect(await up.db.getVersion(), 7);
+      expect(await up.db.getVersion(), AppDatabase.version);
       final repo = Repository(up);
       expect((await repo.meals()).single.id, 'm');
       expect(await repo.sugarReadings(), isEmpty);

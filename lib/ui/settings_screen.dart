@@ -424,7 +424,8 @@ class SettingsScreen extends ConsumerWidget {
                       if (data.healthOn ||
                           data.sugar.isNotEmpty ||
                           data.water.isNotEmpty ||
-                          data.weight.isNotEmpty)
+                          data.weight.isNotEmpty ||
+                          data.periodDays.isNotEmpty)
                         action(
                           'Export health data (CSV)',
                           c.link,
@@ -549,7 +550,11 @@ class SettingsScreen extends ConsumerWidget {
 
   Future<void> _exportHealth(BuildContext context, WidgetRef ref) async {
     final data = ref.read(appDataProvider).requireValue;
-    final n = data.sugar.length + data.water.length + data.weight.length;
+    final n =
+        data.sugar.length +
+        data.water.length +
+        data.weight.length +
+        data.periods.length;
     if (n == 0) {
       toast(context, 'There is no health data to export yet.');
       return;
@@ -673,10 +678,17 @@ class _TrackingCard extends ConsumerWidget {
     );
 
     Widget toggle(Tracker t, String title, String on, String off) {
+      final kept = switch (t) {
+        Tracker.sugar => plural(data.sugar.length, 'entry', 'entries'),
+        Tracker.water => plural(data.water.length, 'entry', 'entries'),
+        Tracker.weight => plural(data.weight.length, 'entry', 'entries'),
+        Tracker.period => plural(data.periodDays.length, 'day'),
+      };
       final count = switch (t) {
         Tracker.sugar => data.sugar.length,
         Tracker.water => data.water.length,
         Tracker.weight => data.weight.length,
+        Tracker.period => data.periodDays.length,
       };
       final enabled = data.tracking(t);
       return row(
@@ -684,7 +696,7 @@ class _TrackingCard extends ConsumerWidget {
         subtitle: enabled
             ? on
             : count > 0
-            ? 'Off · ${plural(count, 'entry', 'entries')} kept'
+            ? 'Off · $kept kept'
             : off,
         divider: false,
         trailing: Switch.adaptive(
@@ -770,6 +782,13 @@ class _TrackingCard extends ConsumerWidget {
               data.weightUnit,
               notifier.setWeightUnit,
             ),
+          divider,
+          toggle(
+            Tracker.period,
+            'Period',
+            'Cycle day and an estimate of the next period',
+            'Log your period days',
+          ),
         ],
       ),
     );

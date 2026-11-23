@@ -7,6 +7,7 @@ import 'package:uuid/uuid.dart';
 
 import '../data/backup.dart';
 import '../data/backup_folder.dart';
+import '../data/cycles.dart';
 import '../data/database.dart';
 import '../data/food_csv.dart';
 import '../data/format.dart';
@@ -50,15 +51,20 @@ class AppData {
     this.sugar = const [],
     this.water = const [],
     this.weight = const [],
+    this.periodDays = const {},
     this.trackSugar = false,
     this.trackWater = false,
     this.trackWeight = false,
+    this.trackPeriod = false,
     this.sugarUnit = SugarUnit.mgdl,
     this.waterUnit = WaterUnit.ml,
     this.weightUnit = WeightUnit.kg,
     this.waterGoalMl,
   }) : _byId = {for (final i in items) i.id: i},
-       _typeById = {for (final t in mealTypes) t.id: t};
+       _typeById = {for (final t in mealTypes) t.id: t},
+       periods = periodsFrom(periodDays) {
+    cycleStats = CycleStats.from(periods);
+  }
 
   final List<FoodItem> items;
 
@@ -126,9 +132,23 @@ class AppData {
   /// Weigh-ins, oldest first.
   final List<WeightEntry> weight;
 
+  /// Days logged as period days, `YYYY-MM-DD`.
+  final Set<String> periodDays;
+
+  /// [periodDays] grouped into periods, oldest first.
+  final List<Period> periods;
+
+  /// Average cycle and period length; null until two periods are logged.
+  late final CycleStats? cycleStats;
+
+  /// Where [day] falls in the cycle, with the next (logged or estimated)
+  /// period start.
+  CycleStatus cycleOn(String day) => CycleStatus.on(day, periods, cycleStats);
+
   final bool trackSugar;
   final bool trackWater;
   final bool trackWeight;
+  final bool trackPeriod;
   final SugarUnit sugarUnit;
   final WaterUnit waterUnit;
   final WeightUnit weightUnit;
@@ -141,10 +161,11 @@ class AppData {
     Tracker.sugar => trackSugar,
     Tracker.water => trackWater,
     Tracker.weight => trackWeight,
+    Tracker.period => trackPeriod,
   };
 
   /// At least one tracker is on, so the Health tab shows.
-  bool get healthOn => trackSugar || trackWater || trackWeight;
+  bool get healthOn => trackSugar || trackWater || trackWeight || trackPeriod;
 
   /// [day]'s readings, earliest first.
   List<SugarReading> sugarOn(String day) =>
@@ -296,6 +317,7 @@ const _kAiIntroSeen = 'ai_intro_seen';
 const _kTrackSugar = 'track_sugar';
 const _kTrackWater = 'track_water';
 const _kTrackWeight = 'track_weight';
+const _kTrackPeriod = 'track_period';
 const _kSugarUnit = 'sugar_unit';
 const _kWaterUnit = 'water_unit';
 const _kWeightUnit = 'weight_unit';
@@ -305,6 +327,7 @@ String _trackKey(Tracker t) => switch (t) {
   Tracker.sugar => _kTrackSugar,
   Tracker.water => _kTrackWater,
   Tracker.weight => _kTrackWeight,
+  Tracker.period => _kTrackPeriod,
 };
 
 /// Settings that describe this device rather than the user's data, so a
@@ -344,6 +367,7 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       repo.sugarReadings(),
       repo.waterEntries(),
       repo.weightEntries(),
+      repo.periodDays(),
     ]);
     final units = results[5] as List<FoodUnit>;
     final visible = units.where((u) => u.active);
@@ -370,9 +394,11 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
       sugar: results[6] as List<SugarReading>,
       water: results[7] as List<WaterEntry>,
       weight: results[8] as List<WeightEntry>,
+      periodDays: (results[9] as List<String>).toSet(),
       trackSugar: settings[_kTrackSugar] == '1',
       trackWater: settings[_kTrackWater] == '1',
       trackWeight: settings[_kTrackWeight] == '1',
+      trackPeriod: settings[_kTrackPeriod] == '1',
       sugarUnit: SugarUnit.parse(settings[_kSugarUnit]),
       waterUnit: WaterUnit.parse(settings[_kWaterUnit]),
       weightUnit: WeightUnit.parse(settings[_kWeightUnit]),
@@ -576,6 +602,10 @@ class AppDataNotifier extends AsyncNotifier<AppData> {
   Future<void> saveWeight(WeightEntry w) => _mutate((r) => r.saveWeight(w));
 
   Future<void> deleteWeight(String id) => _mutate((r) => r.deleteWeight(id));
+
+  /// Logs [dates] as period days, or with [on] false clears them.
+  Future<void> setPeriodDays(Iterable<String> dates, bool on) =>
+      _mutate((r) => r.setPeriodDays(dates, on));
 
   /// Saves a copy of the database wherever the user picks. Returns false if
   /// they cancelled the save dialog; throws if the copy could not be made.
